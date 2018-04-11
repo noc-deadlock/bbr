@@ -73,8 +73,15 @@ def define_options(parser):
     parser.add_option("--garnet-deadlock-threshold", action="store",
                       type="int", default=50000,
                       help="network-level deadlock threshold.")
-
-
+    parser.add_option("--swizzle-swap", action="store", type="int",
+                      default=0,
+                      help="""to enable swizzleSwap scheme.. if not mentioned
+                              then disbled by default""")
+    parser.add_option("--policy", action="store", type="int",
+                      default=0,
+                      help="""policy to be used with swizzleSwap scheme;
+                          default is 0; if swizzleSwap enabled then it must
+                          be non-zero""")
 def create_network(options, ruby):
 
     # Set the network classes based on the command line options

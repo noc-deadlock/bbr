@@ -71,8 +71,31 @@ GarnetNetwork::GarnetNetwork(const Params *p)
     m_swizzleSwap = p->swizzle_swap;
     m_policy = p->policy;
 
-    if(m_swizzleSwap)
-        assert(0);
+    if (m_swizzleSwap) {
+        // If interswap is set then 'whenToSwap' and 'whichToSwap' should
+        // not be equal to 0. Assert.
+    #if (MY_PRINT)
+            cout << "***********************************" << endl;
+            cout << "swizzleSwap is enabled" << endl;
+            cout << "***********************************" << endl;
+    #endif
+        if (m_policy == MINIMAL_) {
+        #if (MY_PRINT)
+                cout << "***********************************" << endl;
+                cout << " 'policy' :::: MINIMAL swizzleSwap Policy is used" << endl;
+                cout << "***********************************" << endl;
+        #endif
+        } else if (m_policy == NON_MINIMAL_) {
+        #if (MY_PRINT)
+                cout << "***********************************" << endl;
+                cout << " 'policy' :::: " << endl;
+                cout << "'policy' :::: NON_MINIMAL swizzleSwap Policy is used"\
+                     << endl;
+                cout << "***********************************" << endl;
+        #endif
+        }
+
+    }
 
     m_enable_fault_model = p->enable_fault_model;
     if (m_enable_fault_model)

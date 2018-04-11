@@ -126,9 +126,9 @@ DRAMCtrl::DRAMCtrl(const DRAMCtrlParams* p) :
 
     // if actual DRAM size does not match memory capacity in system warn!
     if (deviceCapacity != capacity / (1024 * 1024))
-        warn("DRAM device capacity (%d Mbytes) does not match the "
-             "address range assigned (%d Mbytes)\n", deviceCapacity,
-             capacity / (1024 * 1024));
+//        warn("DRAM device capacity (%d Mbytes) does not match the "
+//             "address range assigned (%d Mbytes)\n", deviceCapacity,
+//             capacity / (1024 * 1024));
 
     DPRINTF(DRAM, "Memory capacity %lld (%lld) bytes\n", capacity,
             AbstractMemory::size());

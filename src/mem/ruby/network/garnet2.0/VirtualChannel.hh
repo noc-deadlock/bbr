@@ -78,6 +78,7 @@ class VirtualChannel
     inline flit*
     peekTopFlit()
     {
+        assert(m_input_buffer->getSize() > 0);
         return m_input_buffer->peekTopFlit();
     }
 
@@ -88,6 +89,15 @@ class VirtualChannel
     }
 
     uint32_t functionalWrite(Packet *pkt);
+    bool
+    isEmpty()
+    {
+        // if size is 0 then sent true; false otherwise
+        if(m_input_buffer->getSize() == 0)
+            return true;
+        else
+            return false;
+    }
 
   private:
     int m_id;

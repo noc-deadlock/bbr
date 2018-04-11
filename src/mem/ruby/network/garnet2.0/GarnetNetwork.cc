@@ -45,6 +45,8 @@
 #include "mem/ruby/network/garnet2.0/NetworkInterface.hh"
 #include "mem/ruby/network/garnet2.0/NetworkLink.hh"
 #include "mem/ruby/network/garnet2.0/Router.hh"
+#include "mem/ruby/network/garnet2.0/RoutingUnit.hh"
+#include "mem/ruby/network/garnet2.0/InputUnit.hh"
 #include "mem/ruby/system/RubySystem.hh"
 
 using namespace std;
@@ -65,6 +67,12 @@ GarnetNetwork::GarnetNetwork(const Params *p)
     m_buffers_per_data_vc = p->buffers_per_data_vc;
     m_buffers_per_ctrl_vc = p->buffers_per_ctrl_vc;
     m_routing_algorithm = p->routing_algorithm;
+
+    m_swizzleSwap = p->swizzle_swap;
+    m_policy = p->policy;
+
+    if(m_swizzleSwap)
+        assert(0);
 
     m_enable_fault_model = p->enable_fault_model;
     if (m_enable_fault_model)
@@ -250,6 +258,39 @@ GarnetNetwork::get_router_id(int ni)
 {
     return m_nis[ni]->get_router_id();
 }
+
+
+// scanNetwork function to loop through all routers
+// and print their states.
+void
+GarnetNetwork::scanNetwork()
+{
+    cout << "**********************************************" << endl;
+    for (vector<Router*>::const_iterator itr= m_routers.begin();
+         itr != m_routers.end(); ++itr) {
+        Router* router = safe_cast<Router*>(*itr);
+        cout << "--------" << endl;
+        cout << "Router_id: " << router->get_id() << endl;;
+
+        cout << "~~~~~~~~~~~~~~~" << endl;
+        for (int inport = 0; inport < router->get_num_inports(); inport++) {
+            // print here the inport ID and flit in that inport...
+            cout << "inport: " << inport << " direction: " << router->get_inputUnit_ref()[inport]\
+                                                                    ->get_direction() << endl;
+            assert(inport == router->get_inputUnit_ref()[inport]->get_id());
+            if(router->get_inputUnit_ref()[inport]->vc_isEmpty(0)) {
+                cout << "inport is empty" << endl;
+            } else {
+                cout << "flit info in this inport:" << endl;
+                cout << *(router->get_inputUnit_ref()[inport]->peekTopFlit(0)) << endl;
+            }
+        }
+
+    }
+    cout << "**********************************************" << endl;
+    return;
+}
+
 
 void
 GarnetNetwork::regStats()

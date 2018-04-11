@@ -71,6 +71,13 @@ class GarnetNetwork : public Network
     uint32_t getBuffersPerCtrlVC() { return m_buffers_per_ctrl_vc; }
     int getRoutingAlgorithm() const { return m_routing_algorithm; }
 
+
+	// interSwap congfig.
+	bool isEnableSwizzleSwap() const { return m_swizzleSwap; }
+	uint32_t getPolicy() const {return m_policy; }
+    void scanNetwork(void);
+
+
     bool isFaultModelEnabled() const { return m_enable_fault_model; }
     FaultModel* fault_model;
 
@@ -153,6 +160,9 @@ class GarnetNetwork : public Network
     uint32_t m_buffers_per_data_vc;
     int m_routing_algorithm;
     bool m_enable_fault_model;
+
+    bool m_swizzleSwap;
+    uint32_t m_policy;
 
     // Statistical variables
     Stats::Vector m_packets_received;

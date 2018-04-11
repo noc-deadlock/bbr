@@ -120,3 +120,15 @@ def init_network(options, network, InterfaceClass):
         assert(options.network == "garnet2.0")
         network.enable_fault_model = True
         network.fault_model = FaultModel()
+
+    # Changes here for commandline options of swizzleSwap
+    if options.swizzle_swap == 1:
+        assert(options.network == "garnet2.0")
+        print "setting swizzle_swap to: ", options.swizzle_swap
+        network.swizzle_swap = options.swizzle_swap
+
+    if options.policy:
+        assert(options.network == "garnet2.0")
+        print "setting swizzle_swap-policy to: ", options.policy        
+        network.policy = options.policy
+

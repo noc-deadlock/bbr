@@ -147,6 +147,8 @@ class InputUnit : public Consumer
 
     uint32_t functionalWrite(Packet *pkt);
     void resetStats();
+    int get_id() { return m_id; }
+    bool vc_isEmpty(int vcId) { return m_vcs[vcId]->isEmpty(); }
 
   private:
     int m_id;

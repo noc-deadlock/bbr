@@ -67,6 +67,11 @@ class RoutingUnit
                          int inport,
                          PortDirection inport_dirn);
 
+    // Routing for Mesh
+    int outportComputeRandom(RouteInfo route,
+                         int inport,
+                         PortDirection inport_dirn);
+
     // Custom Routing Algorithm using Port Directions
     int outportComputeCustom(RouteInfo route,
                              int inport,

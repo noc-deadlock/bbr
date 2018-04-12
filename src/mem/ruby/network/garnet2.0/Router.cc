@@ -87,10 +87,33 @@ Router::wakeup()
     DPRINTF(RubyNetwork, "Router %d woke up\n", m_id);
 
     // check for incoming flits
+//    int rand = random() % (m_input_unit.size());
+
     for (int inport = 0; inport < m_input_unit.size(); inport++) {
+//        if(inport == rand)
+//            continue;
         m_input_unit[inport]->wakeup();
     }
 
+    // Now all packets in the input port has been put from the links...
+    // do the swizzleSwap here with differnt options..
+    if((curCycle()%(get_net_ptr()->getNumRouters())) == m_id) {
+        if(get_net_ptr()->isEnableSwizzleSwap()) {
+            // option-1: Minimal
+            if(get_net_ptr()->getPolicy() == MINIMAL_) {
+                int success = swapInport();
+
+                if(success)
+                    cout << "Swap successfully completed..." << endl;
+                else
+                    cout << "Swap couldn't be completed..." << endl;
+
+            } // option-2: Non-Minimal
+            else if(get_net_ptr()->getPolicy() == NON_MINIMAL_) {
+                fatal("Not implemented \n");
+            }
+        }
+    }
     // check for incoming credits
     // Note: the credit update is happening before SA
     // buffer turnaround time =
@@ -107,6 +130,20 @@ Router::wakeup()
     // Switch Traversal
     m_switch->wakeup();
 }
+
+
+int
+Router::swapInport() {
+    // swap inport of these routers...
+//    for(int inport = 0; inport < m_input_unit.size(); inport++) {
+        // see if you can do swap here..
+//        m_input_unit[inport]
+
+//    }
+
+    return 0;
+}
+
 
 void
 Router::addInPort(PortDirection inport_dirn,

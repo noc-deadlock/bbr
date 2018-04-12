@@ -282,6 +282,66 @@ GarnetNetwork::get_router_id(int ni)
     return m_nis[ni]->get_router_id();
 }
 
+Router*
+GarnetNetwork::get_downstreamRouter( PortDirection outport_dir, int upstream_id )
+{
+    int num_cols = getNumCols();
+    int downstream_id = -1; // router_id for downstream router
+
+    // Do border control check here...
+
+    /*outport direction fromt he flit for this router*/
+    if (outport_dir == "East") {
+        downstream_id = upstream_id + 1;
+        // constraints on downstream router-id
+        for(int k=(num_cols-1); k < getNumRouters(); k+=num_cols ) {
+            assert(downstream_id != k);
+        }
+    }
+    else if (outport_dir == "West") {
+        downstream_id = upstream_id - 1;
+        // constraints on downstream router-id
+        for(int k=0; k < getNumRouters(); k+=num_cols ) {
+            assert(downstream_id != k);
+        }
+    }
+    else if (outport_dir == "North") {
+        downstream_id = upstream_id + num_cols;
+        // constraints on downstream router-id
+        for(int k=((num_cols-1)*num_cols); k < getNumRouters(); k+=1 ) {
+            assert(downstream_id != k);
+        }
+    }
+    else if (outport_dir == "South") {
+        downstream_id = upstream_id - num_cols;
+        // constraints on downstream router-id
+        for(int k=0; k < num_cols; k+=1 ) {
+            assert(downstream_id != k);
+        }
+    }
+    else if (outport_dir == "Local"){
+        #if (MY_PRINT)
+            cout << "outport_dir: " << outport_dir << endl;
+        #endif
+        assert(0);
+        return NULL;
+    }
+    else {
+        #if (MY_PRINT)
+            cout << "outport_dir: " << outport_dir << endl;
+        #endif
+        assert(0); // for completion of if-else chain
+        return NULL;
+    }
+
+    if ((downstream_id < 0) || (downstream_id >= getNumRouters())) {
+        assert(0);
+        return NULL;
+    } else
+        return m_routers[downstream_id];
+//    return downstream_id;
+}
+
 
 // scanNetwork function to loop through all routers
 // and print their states.

@@ -103,6 +103,8 @@ class Router : public BasicRouter, public Consumer
     void collateStats();
     void resetStats();
 
+    int swapInport();
+
     // For Fault Model:
     bool get_fault_vector(int temperature, float fault_vector[]) {
         return m_network_ptr->fault_model->fault_vector(m_id, temperature,

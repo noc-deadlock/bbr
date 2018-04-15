@@ -62,6 +62,10 @@ class NetworkLink : public ClockedObject, public Consumer
 
     unsigned int getLinkUtilization() const { return m_link_utilized; }
     const std::vector<unsigned int> & getVcLoad() const { return m_vc_load; }
+    // swizzleSwap structure...
+    inline bool isEmpty() {
+        return linkBuffer->isEmpty();
+    }
 
     inline bool isReady(Cycles curTime)
     { return linkBuffer->isReady(curTime); }

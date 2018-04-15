@@ -150,6 +150,8 @@ class InputUnit : public Consumer
     int get_id() { return m_id; }
     bool vc_isEmpty(int vcId) { return m_vcs[vcId]->isEmpty(); }
 
+    NetworkLink *m_in_link; // making it public for api to be used
+
   private:
     int m_id;
     PortDirection m_direction;
@@ -157,7 +159,6 @@ class InputUnit : public Consumer
     int m_vc_per_vnet;
 
     Router *m_router;
-    NetworkLink *m_in_link;
     CreditLink *m_credit_link;
     flitBuffer *creditQueue;
 

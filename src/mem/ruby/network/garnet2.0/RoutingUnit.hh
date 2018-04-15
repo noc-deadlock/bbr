@@ -76,6 +76,11 @@ class RoutingUnit
     int outportComputeCustom(RouteInfo route,
                              int inport,
                              PortDirection inport_dirn);
+  // Inport and Outport direction to idx maps
+  std::map<PortDirection, int> m_inports_dirn2idx;
+  std::map<int, PortDirection> m_inports_idx2dirn;
+  std::map<int, PortDirection> m_outports_idx2dirn;
+  std::map<PortDirection, int> m_outports_dirn2idx;
 
   private:
     Router *m_router;
@@ -84,11 +89,6 @@ class RoutingUnit
     std::vector<NetDest> m_routing_table;
     std::vector<int> m_weight_table;
 
-    // Inport and Outport direction to idx maps
-    std::map<PortDirection, int> m_inports_dirn2idx;
-    std::map<int, PortDirection> m_inports_idx2dirn;
-    std::map<int, PortDirection> m_outports_idx2dirn;
-    std::map<PortDirection, int> m_outports_dirn2idx;
 };
 
 #endif // __MEM_RUBY_NETWORK_GARNET2_0_ROUTINGUNIT_HH__

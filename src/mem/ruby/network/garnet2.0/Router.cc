@@ -55,6 +55,13 @@ Router::Router(const Params *p)
     m_vc_per_vnet = p->vcs_per_vnet;
     m_num_vcs = m_virtual_networks * m_vc_per_vnet;
 
+    // initializing swizzleSwap parameters
+    inport_occupancy = 0;
+    is_critical = false;
+    critical_inport.id = -1;
+    critical_inport.dirn = "Unknown";
+    critical_inport.send_credit = false;
+
     m_routing_unit = new RoutingUnit(this);
     m_sw_alloc = new SwitchAllocator(this);
     m_switch = new CrossbarSwitch(this);
@@ -86,34 +93,122 @@ Router::wakeup()
 {
     DPRINTF(RubyNetwork, "Router %d woke up\n", m_id);
 
-    // check for incoming flits
-//    int rand = random() % (m_input_unit.size());
+    // 0. even before all this.. every router wakes up and check if there are
+    // more than 1 critical router surrounding it.. if yes.. then it switches
+    // all of them off but 1.
+    if(this->is_critical == false) {
+        vector<Router*> critical_routers;
+//        critical_routers.resize(4);
+        for(int inport = 0; inport < m_input_unit.size(); inport++) {
+            PortDirection dirn = m_routing_unit->m_inports_idx2dirn[inport];
+            if((dirn == "North") || (dirn == "East") ||
+                (dirn == "West") || (dirn == "South")) {
+               Router* router =  get_net_ptr()->get_downstreamRouter(dirn, m_id);
+                if(router->is_critical == true)
+                    critical_routers.push_back(router);
+            }
+        }
+        // this is the place where you.. switch off all but one
+        if(critical_routers.size() > 1) {
+            for(int idx = 1; idx < critical_routers.size(); ++idx) {
+                stablizeCriticalRouter(critical_routers[idx]);
+            }
+        }
+    }
+    // check if it is critical
+    if (this->is_critical == true) {
+        // 1. assert that at least one of the (N_;W_;E_;S_) outport is empty
+        int free_inport = 0;
+        for(int inport = 0; inport < m_input_unit.size(); inport++) {
+            PortDirection dirn = m_routing_unit->m_inports_idx2dirn[inport];
+            if((dirn == "North") || (dirn == "East") ||
+                (dirn == "West") || (dirn == "South"))
+                if(m_input_unit[inport]->vc_isEmpty(0) == true)
+                    free_inport++;
+        }
+        assert(free_inport > 0);
 
+        // 2. assert that there won't be any adjoining critical router...
+        // note: if there's inport, then there's a router in that direction.
+        for(int inport = 0; inport < m_input_unit.size(); inport++) {
+            PortDirection dirn = m_routing_unit->m_inports_idx2dirn[inport];
+            if((dirn == "North") || (dirn == "East") ||
+                (dirn == "West") || (dirn == "South")) {
+               Router* router =  get_net_ptr()->get_downstreamRouter(dirn, m_id);
+               assert(router->is_critical == false);
+            }
+        }
+
+        // 3. more sanity checks:
+        assert(critical_inport.id != -1);
+        assert(critical_inport.dirn != "Unknown");
+    }
+
+    int router_occupancy = 0; // this counts the number of inports currently
+                            // occupied in router..
+    // Router looses the 'criticality'-state here... essentially
+    // it checks if there's any router in my neighbor  which is cretical
+    // then if it is also critical.. then it becomes non-cretical.
+
+    // check for incoming flits
     for (int inport = 0; inport < m_input_unit.size(); inport++) {
-//        if(inport == rand)
-//            continue;
+        // 4. If critical; never consume flit from the link..
+        if((is_critical == true) && (inport == critical_inport.id)) {
+            // 5. check if flit is present on the link.. if yes then
+            // no credit signalling is required...
+            // set the structure accordingly.
+            if (m_input_unit[inport]->m_in_link->isReady(curCycle()))
+                critical_inport.send_credit = false; // no need to send credit
+            else
+                critical_inport.send_credit = true; // decrement credit to upstream router
+                                                   // with probably setting 'isFree' signal false.
+            // continue...
+            continue;
+
+        }
         m_input_unit[inport]->wakeup();
+        if (m_input_unit[inport]->vc_isEmpty(0) == false)
+            router_occupancy++;
+        if(router_occupancy == (m_input_unit.size() - 1)) {
+          // do the analysis here..
+          // check if this router is critical router..
+          // if there's already a critical router present then
+          // make this router non-critical. (also change critical_inport = -1)
+          // if yes, then
+          // skip the iteration
+
+          // else
+          // check if any adjacent router is critical router? if yes..
+          // go for the next iteration..
+
+          // else make this router as
+          // critical router.. the necessary condition condition for
+          // a router to be critical router is that it should have
+          // necessarily have one free port..
+        }
     }
 
     // Now all packets in the input port has been put from the links...
     // do the swizzleSwap here with differnt options..
-    if((curCycle()%(get_net_ptr()->getNumRouters())) == m_id) {
-        if(get_net_ptr()->isEnableSwizzleSwap()) {
-            // option-1: Minimal
-            if(get_net_ptr()->getPolicy() == MINIMAL_) {
-                int success = swapInport();
+    // next option is to always keep doing swap instead of doing at TDM_
+    // if((curCycle()%(get_net_ptr()->getNumRouters())) == m_id) {
+    // We will swap everytime the router wakesup()
+    if(get_net_ptr()->isEnableSwizzleSwap()) {
+        // option-1: Minimal
+        if(get_net_ptr()->getPolicy() == MINIMAL_) {
+            int success = swapInport();
 
-                if(success)
-                    cout << "Swap successfully completed..." << endl;
-                else
-                    cout << "Swap couldn't be completed..." << endl;
+            if(success)
+                cout << "Swap successfully completed..." << endl;
+            else
+                cout << "Swap couldn't be completed..." << endl;
 
-            } // option-2: Non-Minimal
-            else if(get_net_ptr()->getPolicy() == NON_MINIMAL_) {
-                fatal("Not implemented \n");
-            }
+        } // option-2: Non-Minimal
+        else if(get_net_ptr()->getPolicy() == NON_MINIMAL_) {
+            fatal("Not implemented \n");
         }
     }
+    // }
     // check for incoming credits
     // Note: the credit update is happening before SA
     // buffer turnaround time =
@@ -129,9 +224,28 @@ Router::wakeup()
 
     // Switch Traversal
     m_switch->wakeup();
+
+    // calculate inport occupancy of the router...
+    // reset:
+    inport_occupancy = 0;
+    for (int inport = 0; inport < m_input_unit.size(); inport++) {
+        if (m_input_unit[inport]->vc_isEmpty(0) == false)
+            inport_occupancy++;
+    }
+
 }
 
 
+// Rules for swap:
+// 0. choose the inport randomly to swap from..
+// 1. if there's an empty inport present then first swap from there..
+//      then take care of credit signalling in the outVC state of
+//      respective routers
+// 2. else swap with the filled ones and then you don't need to take
+//     care of the credit signalling...
+
+// Note: implement peekTopFlit on linkClass as well.. if there's already
+// packet sitting on the link then don't decrement credits for the bubble...
 int
 Router::swapInport() {
     // swap inport of these routers...

@@ -103,7 +103,17 @@ class Router : public BasicRouter, public Consumer
     void collateStats();
     void resetStats();
 
+    // swizzleSwap structure
     int swapInport();
+    uint32_t inport_occupancy; // at any point it tells number of inport occupied
+                                // of this router
+    bool is_critical; // tells if this router is cretical => has a free inport
+
+    struct {
+        int id; // this is the inport-id
+        PortDirection dirn;
+        bool send_credit;
+    }critical_inport;
 
     // For Fault Model:
     bool get_fault_vector(int temperature, float fault_vector[]) {

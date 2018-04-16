@@ -101,10 +101,15 @@ InputUnit::wakeup()
             int outport = m_router->route_compute(t_flit->get_route(),
                 m_id, m_direction);
 
+            // set the outport in the flit as well as the direction of the
+            // outport in the flit.
+            t_flit->set_outport(outport);
+            PortDirection out_dirn = m_router->getOutportDirection(outport);
+            t_flit->set_outport_dir(out_dirn);
             // Update output port in VC
             // All flits in this packet will use this output port
             // The output port field in the flit is updated after it wins SA
-            grant_outport(vc, outport);
+            // grant_outport(vc, outport);
 
         } else {
             assert(m_vcs[vc]->get_state() == ACTIVE_);

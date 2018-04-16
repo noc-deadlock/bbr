@@ -41,6 +41,8 @@
 #include "mem/ruby/network/garnet2.0/CommonTypes.hh"
 #include "mem/ruby/slicc_interface/Message.hh"
 
+typedef std::string PortDirection;
+
 class flit
 {
   public:
@@ -49,6 +51,7 @@ class flit
          MsgPtr msg_ptr, Cycles curTime);
 
     int get_outport() {return m_outport; }
+    PortDirection get_outport_dir() { return m_outport_dirn; }
     int get_size() { return m_size; }
     Cycles get_enqueue_time() { return m_enqueue_time; }
     Cycles get_dequeue_time() { return m_dequeue_time; }
@@ -63,6 +66,7 @@ class flit
     Cycles get_src_delay() { return src_delay; }
 
     void set_outport(int port) { m_outport = port; }
+    void set_outport_dir(PortDirection dirn) { m_outport_dirn = dirn; }
     void set_time(Cycles time) { m_time = time; }
     void set_vc(int vc) { m_vc = vc; }
     void set_route(RouteInfo route) { m_route = route; }
@@ -111,6 +115,8 @@ class flit
     int m_outport;
     Cycles src_delay;
     std::pair<flit_stage, Cycles> m_stage;
+    // swizzleSwap
+    PortDirection m_outport_dirn;
 };
 
 inline std::ostream&

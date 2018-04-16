@@ -95,6 +95,7 @@ class OutputUnit : public Consumer
     }
 
     uint32_t functionalWrite(Packet *pkt);
+    CreditLink *m_credit_link;
 
   private:
     int m_id;
@@ -103,7 +104,6 @@ class OutputUnit : public Consumer
     int m_vc_per_vnet;
     Router *m_router;
     NetworkLink *m_out_link;
-    CreditLink *m_credit_link;
 
     flitBuffer *m_out_buffer; // This is for the network link to consume
     std::vector<OutVcState *> m_outvc_state; // vc state of downstream router

@@ -45,6 +45,8 @@
 #include "mem/ruby/network/garnet2.0/flit.hh"
 #include "params/GarnetRouter.hh"
 
+typedef std::string PortDirection;
+
 class NetworkLink;
 class CreditLink;
 class InputUnit;
@@ -84,7 +86,19 @@ class Router : public BasicRouter, public Consumer
     {
         m_network_ptr = net_ptr;
     }
-
+    inline PortDirection
+    input_output_dirn_map(PortDirection dirn) {
+        if(dirn == "North")
+            return "South";
+        else if(dirn == "East")
+            return "West";
+        else if(dirn == "West")
+            return "East";
+        else if(dirn == "South")
+            return "North";
+        else
+            assert(0);
+    }
     GarnetNetwork* get_net_ptr()                    { return m_network_ptr; }
     std::vector<InputUnit *>& get_inputUnit_ref()   { return m_input_unit; }
     std::vector<OutputUnit *>& get_outputUnit_ref() { return m_output_unit; }
@@ -128,6 +142,8 @@ class Router : public BasicRouter, public Consumer
 
     uint32_t functionalWrite(Packet *);
 
+    RoutingUnit *m_routing_unit;
+
   private:
     Cycles m_latency;
     int m_virtual_networks, m_num_vcs, m_vc_per_vnet;
@@ -135,7 +151,6 @@ class Router : public BasicRouter, public Consumer
 
     std::vector<InputUnit *> m_input_unit;
     std::vector<OutputUnit *> m_output_unit;
-    RoutingUnit *m_routing_unit;
     SwitchAllocator *m_sw_alloc;
     CrossbarSwitch *m_switch;
 

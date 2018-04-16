@@ -118,7 +118,7 @@ class GarnetNetwork : public Network
     void increment_received_packets(int vnet) { m_packets_received[vnet]++; }
 
     Router*
-    get_downstreamRouter(PortDirection outport_dir, int upstream_id);
+    get_RouterInDirn(PortDirection outport_dir, int upstream_id);
 
     void
     increment_packet_network_latency(Cycles latency, int vnet)

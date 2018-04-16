@@ -39,6 +39,8 @@
 #include "mem/ruby/network/garnet2.0/OutputUnit.hh"
 #include "mem/ruby/network/garnet2.0/Router.hh"
 
+using namespace std;
+
 SwitchAllocator::SwitchAllocator(Router *router)
     : Consumer(router)
 {
@@ -123,9 +125,12 @@ SwitchAllocator::arbitrate_inports()
 
                 // This flit is in SA stage
 
-                int  outport = m_input_unit[inport]->get_outport(invc);
-                int  outvc   = m_input_unit[inport]->get_outvc(invc);
-
+                // int  outport = m_input_unit[inport]->get_outport(invc);
+                // get the outport from the flit instead...
+                int outport =
+                        m_input_unit[inport]->peekTopFlit(invc)->get_outport();
+                // int  outvc   = m_input_unit[inport]->get_outvc(invc);
+                int outvc = -1;
                 // check if the flit in this InputVC is allowed to be sent
                 // send_allowed conditions described in that function.
                 bool make_request =
@@ -185,12 +190,13 @@ SwitchAllocator::arbitrate_outports()
                 int invc = m_vc_winners[outport][inport];
 
                 int outvc = m_input_unit[inport]->get_outvc(invc);
+                assert(outvc == -1);
                 if (outvc == -1) {
                     // VC Allocation - select any free VC from outport
                     outvc = vc_allocate(outport, inport, invc);
                 }
 
-                // remove flit from Input VC
+                // remove flit from Input VC <--- Important.
                 flit *t_flit = m_input_unit[inport]->getTopFlit(invc);
 
                 DPRINTF(RubyNetwork, "SwitchAllocator at Router %d "
@@ -213,12 +219,15 @@ SwitchAllocator::arbitrate_outports()
                 // Note: post route compute in InputUnit,
                 // outport is updated in VC, but not in flit
                 t_flit->set_outport(outport);
+                t_flit->set_outport_dir(m_router->getOutportDirection(outport));
 
                 // set outvc (i.e., invc for next hop) in flit
                 // (This was updated in VC by vc_allocate, but not in flit)
                 t_flit->set_vc(outvc);
 
                 // decrement credit in outvc
+                cout << "decrementing credit in outvc: router " << m_router->get_id()
+                        << " outport: " << outport << " direction: " << m_output_unit[outport]->get_direction() << endl;
                 m_output_unit[outport]->decrement_credit(outvc);
 
                 // flit ready for Switch Traversal
@@ -239,6 +248,12 @@ SwitchAllocator::arbitrate_outports()
 
                     // Send a credit back
                     // along with the information that this VC is now idle
+                    cout << "scheduled increment_credit for inport: " << inport
+                                <<" direction: " << m_input_unit[inport]->get_direction() << endl;
+                    cout <<"paket sent to outport: " << outport << " in direction opp. to: "
+                                << m_output_unit[outport]->get_direction() << endl;
+                    cout << "schedule consumption by link: " << m_router->curCycle() + 1 << endl;
+                    cout << "schedule consumption by router: " << m_router->curCycle() + 2 << endl;
                     m_input_unit[inport]->increment_credit(invc, true,
                         m_router->curCycle());
                 } else {

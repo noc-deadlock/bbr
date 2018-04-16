@@ -152,6 +152,14 @@ class InputUnit : public Consumer
 
     NetworkLink *m_in_link; // making it public for api to be used
 
+    inline void
+    insertFlit(int vc_id, flit *t_flit) {
+        m_vcs[vc_id]->insertFlit(t_flit);
+    }
+
+  CreditLink *m_credit_link;
+  flitBuffer *creditQueue;
+
   private:
     int m_id;
     PortDirection m_direction;
@@ -159,8 +167,6 @@ class InputUnit : public Consumer
     int m_vc_per_vnet;
 
     Router *m_router;
-    CreditLink *m_credit_link;
-    flitBuffer *creditQueue;
 
     // Input Virtual channels
     std::vector<VirtualChannel *> m_vcs;

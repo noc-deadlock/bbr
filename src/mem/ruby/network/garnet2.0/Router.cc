@@ -93,99 +93,12 @@ Router::wakeup()
 {
     DPRINTF(RubyNetwork, "Router %d woke up\n", m_id);
 
-    // 0. even before all this.. every router wakes up and check if there are
-    // more than 1 critical router surrounding it.. if yes.. then it switches
-    // all of them off but 1.
-    if(this->is_critical == false) {
-        vector<Router*> critical_routers;
-//        critical_routers.resize(4);
-        for(int inport = 0; inport < m_input_unit.size(); inport++) {
-            PortDirection dirn = m_routing_unit->m_inports_idx2dirn[inport];
-            if((dirn == "North") || (dirn == "East") ||
-                (dirn == "West") || (dirn == "South")) {
-               Router* router =  get_net_ptr()->get_downstreamRouter(dirn, m_id);
-                if(router->is_critical == true)
-                    critical_routers.push_back(router);
-            }
-        }
-        // this is the place where you.. switch off all but one
-        if(critical_routers.size() > 1) {
-            for(int idx = 1; idx < critical_routers.size(); ++idx) {
-                stablizeCriticalRouter(critical_routers[idx]);
-            }
-        }
-    }
-    // check if it is critical
-    if (this->is_critical == true) {
-        // 1. assert that at least one of the (N_;W_;E_;S_) outport is empty
-        int free_inport = 0;
-        for(int inport = 0; inport < m_input_unit.size(); inport++) {
-            PortDirection dirn = m_routing_unit->m_inports_idx2dirn[inport];
-            if((dirn == "North") || (dirn == "East") ||
-                (dirn == "West") || (dirn == "South"))
-                if(m_input_unit[inport]->vc_isEmpty(0) == true)
-                    free_inport++;
-        }
-        assert(free_inport > 0);
-
-        // 2. assert that there won't be any adjoining critical router...
-        // note: if there's inport, then there's a router in that direction.
-        for(int inport = 0; inport < m_input_unit.size(); inport++) {
-            PortDirection dirn = m_routing_unit->m_inports_idx2dirn[inport];
-            if((dirn == "North") || (dirn == "East") ||
-                (dirn == "West") || (dirn == "South")) {
-               Router* router =  get_net_ptr()->get_downstreamRouter(dirn, m_id);
-               assert(router->is_critical == false);
-            }
-        }
-
-        // 3. more sanity checks:
-        assert(critical_inport.id != -1);
-        assert(critical_inport.dirn != "Unknown");
-    }
-
-    int router_occupancy = 0; // this counts the number of inports currently
-                            // occupied in router..
-    // Router looses the 'criticality'-state here... essentially
-    // it checks if there's any router in my neighbor  which is cretical
-    // then if it is also critical.. then it becomes non-cretical.
-
+    int router_occupancy = 0;
     // check for incoming flits
     for (int inport = 0; inport < m_input_unit.size(); inport++) {
-        // 4. If critical; never consume flit from the link..
-        if((is_critical == true) && (inport == critical_inport.id)) {
-            // 5. check if flit is present on the link.. if yes then
-            // no credit signalling is required...
-            // set the structure accordingly.
-            if (m_input_unit[inport]->m_in_link->isReady(curCycle()))
-                critical_inport.send_credit = false; // no need to send credit
-            else
-                critical_inport.send_credit = true; // decrement credit to upstream router
-                                                   // with probably setting 'isFree' signal false.
-            // continue...
-            continue;
-
-        }
         m_input_unit[inport]->wakeup();
         if (m_input_unit[inport]->vc_isEmpty(0) == false)
             router_occupancy++;
-        if(router_occupancy == (m_input_unit.size() - 1)) {
-          // do the analysis here..
-          // check if this router is critical router..
-          // if there's already a critical router present then
-          // make this router non-critical. (also change critical_inport = -1)
-          // if yes, then
-          // skip the iteration
-
-          // else
-          // check if any adjacent router is critical router? if yes..
-          // go for the next iteration..
-
-          // else make this router as
-          // critical router.. the necessary condition condition for
-          // a router to be critical router is that it should have
-          // necessarily have one free port..
-        }
     }
 
     // Now all packets in the input port has been put from the links...
@@ -248,13 +161,76 @@ Router::wakeup()
 // packet sitting on the link then don't decrement credits for the bubble...
 int
 Router::swapInport() {
+    // two inport-id from where we need to swap
+    int inport1 = -1;
+    int inport2 = -1;
     // swap inport of these routers...
-//    for(int inport = 0; inport < m_input_unit.size(); inport++) {
+    // loop to find the non-empty inport
+    for(int inport = 0; inport < m_input_unit.size(); inport++) {
         // see if you can do swap here..
-//        m_input_unit[inport]
+        if (m_input_unit[inport]->vc_isEmpty(0) == false &&
+            m_routing_unit->m_inports_idx2dirn[inport] != "Local") {
+            inport1 = inport;
+            break;
+        }
+    }
 
-//    }
+    // loop to find the empty inport
+    for(int inport = 0; inport < m_input_unit.size(); inport++) {
+        // see if you can do swap here..
+        if (m_input_unit[inport]->vc_isEmpty(0) == true &&
+            m_routing_unit->m_inports_idx2dirn[inport] != "Local") {
+            inport2 = inport;
+            break;
+        }
+    }
+    cout << "--------------------------" << endl;
+    cout << "Router-id:  " << m_id << "  Cycle: " << curCycle() << endl;
+    cout << "--------------------------" << endl;
+    if ((inport1 != -1) && (inport2 != -1)) {
+        cout << "Non-Empty inport is: " << inport1 << " direction: " << getInportDirection(inport1) << endl;
+        cout << "flit present: " << *m_input_unit[inport1]->peekTopFlit(0) << endl;
+        cout << "Empty inport is: " << inport2 << " direction: " << getInportDirection(inport2) << endl;
 
+        // doSwap.. just set the inport-vc active and idle accordingly..
+        flit *t_flit;
+        t_flit =  m_input_unit[inport1]->getTopFlit(0);
+        m_input_unit[inport1]->set_vc_idle(0, curCycle()); // set this vc idle
+        // insert the flit..
+        m_input_unit[inport2]->insertFlit(0/*vc-id*/,t_flit);
+        //set vc state to be active
+        m_input_unit[inport2]->set_vc_active(0, curCycle()); // set this vc active
+
+        // update credit for both upstream routers...
+        // increment credit for upstream router for inport1's outVC
+        Router* router1 = get_net_ptr()->get_RouterInDirn(getInportDirection(inport1), m_id);
+        // get outputUnit direction in router1
+        PortDirection upstream1_outputUnit_dirn = input_output_dirn_map(getInportDirection(inport1));
+        // get id for that direction in router1
+        int upstream1_outputUnit = router1->m_routing_unit->m_outports_dirn2idx[upstream1_outputUnit_dirn];
+        cout << "swap increment credit..." << endl;
+        router1->get_outputUnit_ref()[upstream1_outputUnit]->increment_credit(0);
+        // decrement credit for upstream router for inport2's outVC
+        Router* router2 = get_net_ptr()->get_RouterInDirn(getInportDirection(inport2), m_id);
+        // get outputUnit direction in router2
+        PortDirection upstream2_outputUnit_dirn = input_output_dirn_map(getInportDirection(inport2));
+        // get id for that direction in router2
+        cout << "upstream2_outputUnit_dirn: " << upstream2_outputUnit_dirn << endl;
+        int upstream2_outputUnit = router2->m_routing_unit->m_outports_dirn2idx[upstream2_outputUnit_dirn];
+        cout << "checking credit-link before decrementing credit...(should be empty): " <<
+            router2->get_outputUnit_ref()[upstream2_outputUnit]->m_credit_link->isEmpty() << endl;
+        cout << "checking credit-link before decrementing credit...(should be empty): " <<
+            this->get_inputUnit_ref()[inport2]->m_credit_link->isEmpty() << endl;
+
+        cout << "swap decrement credit..." << endl;
+        router2->get_outputUnit_ref()[upstream2_outputUnit]->decrement_credit(0);
+
+        return 1;
+        // assert(0);
+    }
+
+    // write something important here related to credit-signalling...
+    // do we need to update something here...
     return 0;
 }
 

@@ -109,12 +109,17 @@ Router::wakeup()
     if(get_net_ptr()->isEnableSwizzleSwap()) {
         // option-1: Minimal
         if(get_net_ptr()->getPolicy() == MINIMAL_) {
-            int success = swapInport();
+            int success = -1;
+            success = swapInport();
 
-            if(success)
-                cout << "Swap successfully completed..." << endl;
-            else
+            if(success == 1)
+                cout << "Swap completed with empty input-port..." << endl;
+            else if (success == 2)
+                cout << "Swap completed with flit with differnt outport"<< endl;
+            else if (success == 0)
                 cout << "Swap couldn't be completed..." << endl;
+            else
+                fatal("Not possible \n");
 
         } // option-2: Non-Minimal
         else if(get_net_ptr()->getPolicy() == NON_MINIMAL_) {
@@ -162,15 +167,18 @@ Router::wakeup()
 int
 Router::swapInport() {
     // two inport-id from where we need to swap
-    int inport1 = -1;
-    int inport2 = -1;
+    int inport_full = -1;
+    int inport_empty = -1;
+    // inport which contain filt with different outport
+    // than inport_full
+    int inport_diffrnt = -1;
     // swap inport of these routers...
     // loop to find the non-empty inport
     for(int inport = 0; inport < m_input_unit.size(); inport++) {
         // see if you can do swap here..
         if (m_input_unit[inport]->vc_isEmpty(0) == false &&
             m_routing_unit->m_inports_idx2dirn[inport] != "Local") {
-            inport1 = inport;
+            inport_full = inport;
             break;
         }
     }
@@ -192,42 +200,65 @@ Router::swapInport() {
             if (router2->get_outputUnit_ref()[upstream2_outputUnit]->is_vc_idle(0, curCycle()) == false)
                 continue;
 
-            inport2 = inport;
+            inport_empty = inport;
             break;
         }
     }
-    cout << "--------------------------" << endl;
-    cout << "Router-id:  " << m_id << "  Cycle: " << curCycle() << endl;
-    cout << "--------------------------" << endl;
-    if ((inport1 != -1) && (inport2 != -1)) {
-        cout << "Non-Empty inport is: " << inport1 << " direction: " << getInportDirection(inport1) << endl;
-        cout << "flit present: " << *m_input_unit[inport1]->peekTopFlit(0) << endl;
-        cout << "Empty inport is: " << inport2 << " direction: " << getInportDirection(inport2) << endl;
 
+    // if inport_empty is still -1 then find any other inport which
+    // has a flit with different outport direction
+    // then the one present at inport_full
+    if(inport_empty == -1 && inport_full != -1) {
+        // need not to worry about credits and vc and outVc states
+        for(int inport = 0; inport < m_input_unit.size(); inport++) {
+            // see if you can do swap here..
+            if (m_input_unit[inport]->vc_isEmpty(0) == false &&
+                m_routing_unit->m_inports_idx2dirn[inport] != "Local") {
+
+                if(((m_input_unit[inport]->peekTopFlit(0)->get_outport_dir()) !=
+                        m_input_unit[inport_full]->peekTopFlit(0)->get_outport_dir())) {
+
+                    inport_diffrnt = inport;
+                    break;
+                }
+            }
+        }
+    }
+    #if(MY_PRINT)
+        cout << "--------------------------" << endl;
+        cout << "Router-id:  " << m_id << "  Cycle: " << curCycle() << endl;
+        cout << "--------------------------" << endl;
+    #endif
+    if ((inport_full != -1) && (inport_empty != -1)) {
+        #if(MY_PRINT)
+            cout << "Non-Empty inport is: " << inport_full << " direction: " << getInportDirection(inport_full) << endl;
+            cout << "flit present: " << *m_input_unit[inport_full]->peekTopFlit(0) << endl;
+            cout << "Empty inport is: " << inport_empty << " direction: " << getInportDirection(inport_empty) << endl;
+        #endif
         // doSwap.. just set the inport-vc active and idle accordingly..
         flit *t_flit;
-        t_flit =  m_input_unit[inport1]->getTopFlit(0);
+        t_flit =  m_input_unit[inport_full]->getTopFlit(0);
         // insert the flit..
-        m_input_unit[inport2]->insertFlit(0/*vc-id*/,t_flit);
+        m_input_unit[inport_empty]->insertFlit(0/*vc-id*/,t_flit);
         //set vc state to be active
-        m_input_unit[inport2]->set_vc_active(0, curCycle()); // set this vc active
+        m_input_unit[inport_empty]->set_vc_active(0, curCycle()); // set this vc active
 
         // update credit for both upstream routers...
-        // increment credit for upstream router for inport1's outVC
-        Router* router1 = get_net_ptr()->get_RouterInDirn(getInportDirection(inport1), m_id);
+        // increment credit for upstream router for inport_full's outVC
+        Router* router1 = get_net_ptr()->get_RouterInDirn(getInportDirection(inport_full), m_id);
         // get outputUnit direction in router1
-        PortDirection upstream1_outputUnit_dirn = input_output_dirn_map(getInportDirection(inport1));
+        PortDirection upstream1_outputUnit_dirn = input_output_dirn_map(getInportDirection(inport_full));
         // get id for that direction in router1
         int upstream1_outputUnit = router1->m_routing_unit->m_outports_dirn2idx[upstream1_outputUnit_dirn];
         cout << "swap increment credit..." << endl;
         router1->get_outputUnit_ref()[upstream1_outputUnit]->increment_credit(0);
-        m_input_unit[inport1]->set_vc_idle(0, curCycle()); // set this vc idle
+        m_input_unit[inport_full]->set_vc_idle(0, curCycle()); // set this vc idle
         // update the outVcState for this router as well.. make it IDLE_
         router1->get_outputUnit_ref()[upstream1_outputUnit]->set_vc_state(IDLE_, 0, curCycle());
-        // decrement credit for upstream router for inport2's outVC
-        Router* router2 = get_net_ptr()->get_RouterInDirn(getInportDirection(inport2), m_id);
+        // decrement credit for upstream router for inport_empty's outVC
+        Router* router2 = get_net_ptr()->get_RouterInDirn(getInportDirection(inport_empty), m_id);
         // get outputUnit direction in router2
-        PortDirection upstream2_outputUnit_dirn = input_output_dirn_map(getInportDirection(inport2));
+        PortDirection upstream2_outputUnit_dirn = input_output_dirn_map(getInportDirection(inport_empty));
         // get id for that direction in router2
         cout << "upstream2_outputUnit_dirn: " << upstream2_outputUnit_dirn << endl;
         int upstream2_outputUnit = router2->m_routing_unit->m_outports_dirn2idx[upstream2_outputUnit_dirn];
@@ -238,9 +269,19 @@ Router::swapInport() {
         return 1;
         // assert(0);
     }
+    else if((inport_diffrnt != -1) && (inport_full != -1)) {
+        flit *t_flit_full;
+        flit *t_flit_diffrnt;
 
-    // write something important here related to credit-signalling...
-    // do we need to update something here...
+        t_flit_diffrnt = m_input_unit[inport_diffrnt]->getTopFlit(0);
+        t_flit_full = m_input_unit[inport_full]->getTopFlit(0);
+
+        // do the swap...
+        m_input_unit[inport_diffrnt]->insertFlit(0, t_flit_diffrnt);
+        m_input_unit[inport_full]->insertFlit(0, t_flit_full);
+
+        return 2;
+    }
     return 0;
 }
 

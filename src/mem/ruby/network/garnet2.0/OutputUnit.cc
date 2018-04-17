@@ -88,6 +88,14 @@ OutputUnit::increment_credit(int out_vc)
     m_outvc_state[out_vc]->increment_credit();
 }
 
+
+bool
+OutputUnit::chk_has_credit(int out_vc)
+{
+    return m_outvc_state[out_vc]->has_credit();
+}
+
+
 // Check if the output VC (i.e., input VC at next router)
 // has free credits (i..e, buffer slots).
 // This is tracked by OutVcState

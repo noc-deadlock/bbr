@@ -150,16 +150,16 @@ class InputUnit : public Consumer
     int get_id() { return m_id; }
     bool vc_isEmpty(int vcId) { return m_vcs[vcId]->isEmpty(); }
 
-    NetworkLink *m_in_link; // making it public for api to be used
 
     inline void
     insertFlit(int vc_id, flit *t_flit) {
         m_vcs[vc_id]->insertFlit(t_flit);
     }
 
+
+  NetworkLink *m_in_link; // making it public for api to be used
   CreditLink *m_credit_link;
   flitBuffer *creditQueue;
-
   private:
     int m_id;
     PortDirection m_direction;

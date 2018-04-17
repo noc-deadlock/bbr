@@ -136,6 +136,6 @@ def init_network(options, network, InterfaceClass):
 
     if options.policy:
         assert(options.network == "garnet2.0")
-        print "setting swizzle_swap-policy to: ", options.policy        
+        print "setting swizzle_swap-policy to: ", options.policy
         network.policy = options.policy
 

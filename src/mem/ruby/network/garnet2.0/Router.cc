@@ -118,7 +118,7 @@ Router::wakeup()
 
         } // option-2: Non-Minimal
         else if(get_net_ptr()->getPolicy() == NON_MINIMAL_) {
-            fatal("Not implemented \n");
+            fatal("Not implemented \n"); // implement deflection here
         }
     }
     // }
@@ -180,6 +180,18 @@ Router::swapInport() {
         // see if you can do swap here..
         if (m_input_unit[inport]->vc_isEmpty(0) == true &&
             m_routing_unit->m_inports_idx2dirn[inport] != "Local") {
+            // check credit of the upstream router here... if those
+            // credit are 0 [there's credit-present on the link] which
+            // is yet not comsumed by the outputUnit of upstream router
+            // then don't swap and continue..
+            Router* router2 = get_net_ptr()->get_RouterInDirn(getInportDirection(inport), m_id);
+            PortDirection upstream2_outputUnit_dirn = input_output_dirn_map(getInportDirection(inport));
+            int upstream2_outputUnit = router2->m_routing_unit->m_outports_dirn2idx[upstream2_outputUnit_dirn];
+            // if vc_isEmpty() then hs_credit() should return true.. if it returns false it means there is
+            // credit in flit to be consumed by the upstream router.. therefore continue...
+            if (router2->get_outputUnit_ref()[upstream2_outputUnit]->is_vc_idle(0, curCycle()) == false)
+                continue;
+
             inport2 = inport;
             break;
         }
@@ -195,7 +207,6 @@ Router::swapInport() {
         // doSwap.. just set the inport-vc active and idle accordingly..
         flit *t_flit;
         t_flit =  m_input_unit[inport1]->getTopFlit(0);
-        m_input_unit[inport1]->set_vc_idle(0, curCycle()); // set this vc idle
         // insert the flit..
         m_input_unit[inport2]->insertFlit(0/*vc-id*/,t_flit);
         //set vc state to be active
@@ -210,6 +221,9 @@ Router::swapInport() {
         int upstream1_outputUnit = router1->m_routing_unit->m_outports_dirn2idx[upstream1_outputUnit_dirn];
         cout << "swap increment credit..." << endl;
         router1->get_outputUnit_ref()[upstream1_outputUnit]->increment_credit(0);
+        m_input_unit[inport1]->set_vc_idle(0, curCycle()); // set this vc idle
+        // update the outVcState for this router as well.. make it IDLE_
+        router1->get_outputUnit_ref()[upstream1_outputUnit]->set_vc_state(IDLE_, 0, curCycle());
         // decrement credit for upstream router for inport2's outVC
         Router* router2 = get_net_ptr()->get_RouterInDirn(getInportDirection(inport2), m_id);
         // get outputUnit direction in router2
@@ -217,13 +231,9 @@ Router::swapInport() {
         // get id for that direction in router2
         cout << "upstream2_outputUnit_dirn: " << upstream2_outputUnit_dirn << endl;
         int upstream2_outputUnit = router2->m_routing_unit->m_outports_dirn2idx[upstream2_outputUnit_dirn];
-        cout << "checking credit-link before decrementing credit...(should be empty): " <<
-            router2->get_outputUnit_ref()[upstream2_outputUnit]->m_credit_link->isEmpty() << endl;
-        cout << "checking credit-link before decrementing credit...(should be empty): " <<
-            this->get_inputUnit_ref()[inport2]->m_credit_link->isEmpty() << endl;
 
-        cout << "swap decrement credit..." << endl;
         router2->get_outputUnit_ref()[upstream2_outputUnit]->decrement_credit(0);
+        router2->get_outputUnit_ref()[upstream2_outputUnit]->set_vc_state(ACTIVE_, 0, curCycle());
 
         return 1;
         // assert(0);

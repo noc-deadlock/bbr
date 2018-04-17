@@ -193,6 +193,7 @@ SwitchAllocator::arbitrate_outports()
                 assert(outvc == -1);
                 if (outvc == -1) {
                     // VC Allocation - select any free VC from outport
+                    // sets the outVcState to be ACTIVE_
                     outvc = vc_allocate(outport, inport, invc);
                 }
 
@@ -228,8 +229,10 @@ SwitchAllocator::arbitrate_outports()
                 // decrement credit in outvc
                 cout << "decrementing credit in outvc: router " << m_router->get_id()
                         << " outport: " << outport << " direction: " << m_output_unit[outport]->get_direction() << endl;
-                m_output_unit[outport]->decrement_credit(outvc);
 
+                m_output_unit[outport]->decrement_credit(outvc); // decrement credit here..
+                                                                // but outVC was alredy ACTIVE_
+                                                                // at this time
                 // flit ready for Switch Traversal
                 t_flit->advance_stage(ST_, m_router->curCycle());
                 m_router->grant_switch(inport, t_flit);

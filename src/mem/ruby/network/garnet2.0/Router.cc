@@ -121,6 +121,21 @@ Router::wakeup()
             else
                 fatal("Not possible \n");
 
+            // at TDM_ if router's all inport are occupied.. create a bubble..
+            // send the flit to its destination..
+            if(((curCycle()%(get_net_ptr()->getNumRouters())) == m_id) &&
+                (router_occupancy == (m_input_unit.size()-1))) {
+                // this router is completely filled.. select a flit
+                // to be drained randomly '0:' is always Local_
+                int inport;
+                for (inport = 1; inport < m_input_unit.size(); inport++)
+                    if(m_input_unit[inport]->vc_isEmpty(0) == false &&
+                        m_input_unit[inport]->peekTopFlit(0)->get_outport_dir() != "Local")
+                            break;
+
+                // this is the inport that you will drain.
+
+            }
         } // option-2: Non-Minimal
         else if(get_net_ptr()->getPolicy() == NON_MINIMAL_) {
             fatal("Not implemented \n"); // implement deflection here

@@ -89,6 +89,17 @@ class OutputUnit : public Consumer
     }
 
     inline void
+    set_vc_critical(int vc, bool val)
+    {
+        m_outvc_state[vc]->set_vc_critical(val);
+    }
+
+    inline bool
+    is_vc_critical(int vc)
+    {
+        return(m_outvc_state[vc]->is_vc_critical());
+    }
+    inline void
     insert_flit(flit *t_flit)
     {
         m_out_buffer->insert(t_flit);
@@ -96,7 +107,6 @@ class OutputUnit : public Consumer
     }
 
     uint32_t functionalWrite(Packet *pkt);
-    CreditLink *m_credit_link;
 
   private:
     int m_id;
@@ -105,6 +115,7 @@ class OutputUnit : public Consumer
     int m_vc_per_vnet;
     Router *m_router;
     NetworkLink *m_out_link;
+    CreditLink *m_credit_link;
 
     flitBuffer *m_out_buffer; // This is for the network link to consume
     std::vector<OutVcState *> m_outvc_state; // vc state of downstream router

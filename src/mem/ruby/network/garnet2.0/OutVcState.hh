@@ -58,6 +58,14 @@ class OutVcState
         m_vc_state = state;
         m_time = time;
     }
+    inline void
+    set_vc_critical(bool val) {
+        critical_vc = val;
+    }
+    inline bool
+    is_vc_critical() {
+        return (critical_vc == true);
+    }
 
   private:
     int m_id ;
@@ -65,6 +73,7 @@ class OutVcState
     VC_state_type m_vc_state;
     int m_credit_count;
     int m_max_credit_count;
+    bool critical_vc;
 };
 
 #endif //__MEM_RUBY_NETWORK_GARNET2_0_OUTVCSTATE_HH__

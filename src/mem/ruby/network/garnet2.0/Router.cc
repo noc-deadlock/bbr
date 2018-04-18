@@ -84,14 +84,95 @@ Router::init()
 {
     BasicRouter::init();
 
+    // initialize your critical inport here
+    // and then put an assert in the wakeup
+    // that its never disabled and never points
+    // to "Local_"
+    for(int inport=0; inport < m_input_unit.size(); inport++) {
+        if(m_input_unit[inport]->get_direction() != "Local") {
+            critical_inport.id = inport;
+            critical_inport.dirn = m_input_unit[inport]->get_direction();
+            assert(m_input_unit[inport]->vc_isEmpty(0) == true);
+            break;
+        }
+        // initialize outVcState of upstream router as well...
+        Router* router_ = get_net_ptr()->get_RouterInDirn(getInportDirection(critical_inport.id), m_id);
+        // get outputUnit direction in router_
+        PortDirection upstream_outputUnit_dirn = input_output_dirn_map(getInportDirection(critical_inport.id));
+        // get id for that direction in router_
+        int upstream_outputUnit_id = router_->m_routing_unit->m_outports_dirn2idx[upstream_outputUnit_dirn];
+        router_->get_outputUnit_ref()[upstream_outputUnit_id]->set_vc_critical(0, true);
+    }
+
     m_sw_alloc->init();
     m_switch->init();
+}
+
+void
+Router::critical_swap(int critical_inport_id, int inport_id)
+{
+    // critical_inport_id must be empty
+    // inport_id must NOT be empty... doSwap
+    // doSwap.. just set the inport-vc active and idle accordingly..
+    flit *t_flit;
+    t_flit =  m_input_unit[inport_id]->getTopFlit(0);
+    // insert the flit..
+    m_input_unit[critical_inport_id]->insertFlit(0/*vc-id*/,t_flit);
+
+    // update credit for both upstream routers...
+    // increment credit for upstream router for inport_id's outVC
+    Router* router1 = get_net_ptr()->get_RouterInDirn(getInportDirection(inport_id), m_id);
+    // get outputUnit direction in router1
+    PortDirection upstream1_outputUnit_dirn = input_output_dirn_map(getInportDirection(inport_id));
+    // get id for that direction in router1
+    int upstream1_outputUnit = router1->m_routing_unit->m_outports_dirn2idx[upstream1_outputUnit_dirn];
+    router1->get_outputUnit_ref()[upstream1_outputUnit]->increment_credit(0);
+    m_input_unit[inport_id]->set_vc_idle(0, curCycle()); // set this vc idle
+    // update the outVcState for this router as well.. make it IDLE_
+    router1->get_outputUnit_ref()[upstream1_outputUnit]->set_vc_state(IDLE_, 0, curCycle());
+    // mark the critical outVc in upstream tourter as well...
+    router1->get_outputUnit_ref()[upstream1_outputUnit]->set_vc_critical(0, true);
+    /*-------------------------------------------------------------------------*/
+    // decrement credit for upstream router for critical_inport_id's outVC
+    Router* router2 = get_net_ptr()->get_RouterInDirn(getInportDirection(critical_inport_id), m_id);
+    // get outputUnit direction in router2
+    PortDirection upstream2_outputUnit_dirn = input_output_dirn_map(getInportDirection(critical_inport_id));
+    // get id for that direction in router2
+    cout << "upstream2_outputUnit_dirn: " << upstream2_outputUnit_dirn << endl;
+    int upstream2_outputUnit = router2->m_routing_unit->m_outports_dirn2idx[upstream2_outputUnit_dirn];
+    router2->get_outputUnit_ref()[upstream2_outputUnit]->decrement_credit(0);
+    //set vc state to be active
+    m_input_unit[critical_inport_id]->set_vc_active(0, curCycle()); // set this vc active
+    router2->get_outputUnit_ref()[upstream2_outputUnit]->set_vc_state(ACTIVE_, 0, curCycle());
+    // unmark the outVc accordingly
+    router2->get_outputUnit_ref()[upstream2_outputUnit]->set_vc_critical(0, false);
+
+    // update the critical inport structure here...
+    critical_inport.id = inport_id;
+    critical_inport.dirn = getInportDirection(inport_id);
+
+    return;
 }
 
 void
 Router::wakeup()
 {
     DPRINTF(RubyNetwork, "Router %d woke up\n", m_id);
+
+    if(get_net_ptr()->isEnableSwizzleSwap() == true) {
+        assert(m_input_unit[critical_inport.id]->vc_isEmpty(0) == true);
+        assert(m_input_unit[critical_inport.id]->get_direction() != "Local");
+        assert(m_input_unit[critical_inport.id]->get_direction() ==
+            critical_inport.dirn);
+        Router* router_ = get_net_ptr()->
+            get_RouterInDirn(getInportDirection(critical_inport.id), m_id);
+        PortDirection upstream_outputUnit_dirn =
+            input_output_dirn_map(getInportDirection(critical_inport.id));
+        int upstream_outputUnit_id =
+            router_->m_routing_unit->m_outports_dirn2idx[upstream_outputUnit_dirn];
+        assert(router_->get_outputUnit_ref()[upstream_outputUnit_id]->is_vc_critical(0)
+            == true);
+    }
 
     int router_occupancy = 0;
     // check for incoming flits

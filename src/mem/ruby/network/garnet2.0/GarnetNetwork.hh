@@ -152,7 +152,7 @@ class GarnetNetwork : public Network
     {
         m_total_hops += hops;
     }
-
+    uint32_t prnt_cycle;
   protected:
     // Configuration
     int m_num_rows;

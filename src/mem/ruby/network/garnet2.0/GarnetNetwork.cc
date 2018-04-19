@@ -70,6 +70,7 @@ GarnetNetwork::GarnetNetwork(const Params *p)
 
     m_swizzleSwap = p->swizzle_swap;
     m_policy = p->policy;
+    prnt_cycle = 800;
 
     if (m_swizzleSwap) {
         // If interswap is set then 'whenToSwap' and 'whichToSwap' should
@@ -287,8 +288,8 @@ GarnetNetwork::get_RouterInDirn( PortDirection outport_dir, int my_id )
 {
     int num_cols = getNumCols();
     int downstream_id = -1; // router_id for downstream router
-    cout << "GarnetNetwork::get_RouterInDirn: outport_dir: " << outport_dir << endl;
-    cout << "GarnetNetwork::get_RouterInDirn: my_id: " << my_id << endl;
+//    cout << "GarnetNetwork::get_RouterInDirn: outport_dir: " << outport_dir << endl;
+//    cout << "GarnetNetwork::get_RouterInDirn: my_id: " << my_id << endl;
     // Do border control check here...
 
     /*outport direction fromt he flit for this router*/
@@ -335,9 +336,9 @@ GarnetNetwork::get_RouterInDirn( PortDirection outport_dir, int my_id )
         return NULL;
     }
 
-    cout << "GarnetNetwork::get_RouterInDirn: downstream_id: " << downstream_id << endl;
+//    cout << "GarnetNetwork::get_RouterInDirn: downstream_id: " << downstream_id << endl;
 //    cout << "GarnetNetwork::get_RouterInDirn: my_id: " << my_id << endl;
-    cout << "----------------" << endl;
+//    cout << "----------------" << endl;
 
     if ((downstream_id < 0) || (downstream_id >= getNumRouters())) {
         assert(0);
@@ -367,9 +368,12 @@ GarnetNetwork::scanNetwork()
                                                                     ->get_direction() << endl;
             assert(inport == router->get_inputUnit_ref()[inport]->get_id());
             if(router->get_inputUnit_ref()[inport]->vc_isEmpty(0)) {
-                cout << "inport is empty" << endl;
+                if(router->critical_inport.id == inport)
+                    cout << "inport is empty and critical" << endl;
+                else
+                    cout << "inport is empty" << endl;
             } else {
-                cout << "flit info in this inport:" << endl;
+//                cout << "flit info in this inport:" << endl;
                 cout << *(router->get_inputUnit_ref()[inport]->peekTopFlit(0)) << endl;
             }
         }

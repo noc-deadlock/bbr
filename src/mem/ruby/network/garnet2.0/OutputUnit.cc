@@ -113,7 +113,8 @@ OutputUnit::has_free_vc(int vnet)
 {
     int vc_base = vnet*m_vc_per_vnet;
     for (int vc = vc_base; vc < vc_base + m_vc_per_vnet; vc++) {
-        if (is_vc_idle(vc, m_router->curCycle()))
+        if (is_vc_idle(vc, m_router->curCycle()) &&
+            (is_vc_critical(vc) == false))
             return true;
     }
 

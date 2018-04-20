@@ -169,6 +169,123 @@ Router::critical_swap(int critical_inport_id, int inport_id)
     return;
 }
 
+void
+Router::bubble_deflect()
+{
+    // take the flit and swap...
+    for(int inp_ = 0; inp_ < m_input_unit.size(); ++inp_) {
+        if(getInportDirection(inp_) == "Local")
+            continue;
+        if(inp_ == critical_inport.id)
+            continue;
+
+        if(m_input_unit[inp_]->vc_isEmpty(0) == false) {
+            // get the upstream router and do the swap
+            // given upstream router's flit is not going
+            // to local port...
+            // 1. Try mutual routing..
+            // 2. Try mis routing
+            // 3. don't misroute "Local" outport flit
+            cout << "inp_: " << inp_ << " getInportDirection(inp_): " <<
+                    getInportDirection(inp_) << endl;
+            Router* upstream_ = get_net_ptr()->\
+                        get_RouterInDirn(getInportDirection(inp_), m_id);
+            cout << "upstream_ id: " << upstream_->get_id() << " my-id: " << m_id << endl;
+            PortDirection towards_me_ = input_output_dirn_map(getInportDirection(inp_));
+            std::vector<InputUnit *> upstream_inpUnit = upstream_->get_inputUnit_ref();
+            // 1. mutual-routing loop
+            int upstrm_inp_ = -1;
+            for(upstrm_inp_ = 2;
+                upstrm_inp_ < upstream_inpUnit.size();
+                ++upstrm_inp_) {
+                // check if anyflit has outport 'towads_me_' break and choose that flit
+                if(upstream_inpUnit[upstrm_inp_]->vc_isEmpty(0) == false) {
+                    if(upstream_inpUnit[upstrm_inp_]->\
+                        peekTopFlit(0)->get_outport_dir() == towards_me_)
+                        break;
+                }
+            }
+            if(upstrm_inp_ < upstream_inpUnit.size()) {
+                flit *t_flit1;
+                flit *t_flit2;
+
+                t_flit1 = m_input_unit[inp_]->getTopFlit(0);
+                t_flit2 = upstream_inpUnit[upstrm_inp_]->getTopFlit(0);
+                // Route computer for these flit respectively
+
+                int outport2 = route_compute(t_flit2->get_route(),
+                                            inp_,
+                                            m_routing_unit->m_inports_idx2dirn[inp_]);
+                t_flit2->set_outport(outport2);
+                t_flit2->set_outport_dir(m_routing_unit->m_outports_idx2dirn[outport2]);
+                // Swap
+                m_input_unit[inp_]->insertFlit(0, t_flit2);
+
+                int outport1 = upstream_->route_compute(t_flit1->get_route(),
+                                            upstrm_inp_,
+                                            upstream_->m_routing_unit->\
+                                            m_inports_idx2dirn[upstrm_inp_]);
+                t_flit1->set_outport(outport1);
+                t_flit1->set_outport_dir(upstream_->m_routing_unit->\
+                                            m_inports_idx2dirn[upstrm_inp_]);
+                upstream_inpUnit[upstrm_inp_]->insertFlit(0, t_flit1);
+                // routing for these flits..
+
+                cout << "Deflection successful via mutual routing..." << endl;
+                // return
+                return;
+            }
+            else {
+                // Loop over all the inport of upstream router whichever doesn't have outportLocal
+                // swap
+                upstrm_inp_ = -1; // reset
+                for(upstrm_inp_ = 2;
+                    upstrm_inp_ < upstream_inpUnit.size();
+                    ++upstrm_inp_) {
+                    // check if anyflit has outport 'towads_me_' break and choose that flit
+                    if(upstream_inpUnit[upstrm_inp_]->vc_isEmpty(0) == false) {
+                        if(upstream_inpUnit[upstrm_inp_]->peekTopFlit(0)->get_outport_dir() != "Local")
+                            break;
+                    }
+                }
+                if(upstrm_inp_ < upstream_inpUnit.size()) {
+                    flit *t_flit1;
+                    flit *t_flit2;
+
+                    t_flit1 = m_input_unit[inp_]->getTopFlit(0);
+                    t_flit2 = upstream_inpUnit[upstrm_inp_]->getTopFlit(0);
+
+                    // Swap
+                    int outport2 = route_compute(t_flit2->get_route(),
+                                                inp_,
+                                                m_routing_unit->m_inports_idx2dirn[inp_]);
+                    t_flit2->set_outport(outport2);
+                    t_flit2->set_outport_dir(m_routing_unit->m_outports_idx2dirn[outport2]);
+                    // Swap
+                    m_input_unit[inp_]->insertFlit(0, t_flit2);
+
+                    int outport1 = upstream_->route_compute(t_flit1->get_route(),
+                                                upstrm_inp_,
+                                                upstream_->m_routing_unit->\
+                                                m_inports_idx2dirn[upstrm_inp_]);
+                    t_flit1->set_outport(outport1);
+                    t_flit1->set_outport_dir(upstream_->m_routing_unit->\
+                                                m_inports_idx2dirn[upstrm_inp_]);
+                    upstream_inpUnit[upstrm_inp_]->insertFlit(0, t_flit1);
+
+                    cout << "Deflection successful via without routing..." << endl;
+                    // return
+                    return;
+                }
+                else {
+                    cout << "Deflection not successful..." << endl;
+                    return;
+                }
+            }
+        }
+    }
+    return;
+}
 
 // this api will loop through all the input port of the router (point by my_id);
 // except critical and local inport
@@ -195,7 +312,6 @@ Router::chk_critical_deflect(int my_id)
         for(int input_port = 0; input_port < input_unit_.size(); ++input_port) {
             // calculate the occupancy of this router
             if(input_unit_[input_port]->vc_isEmpty(0) == false) {
-
                 router_occupancy++;
             }
         }
@@ -209,7 +325,9 @@ Router::chk_critical_deflect(int my_id)
     }
     // if the size of 'doDeflect' vector is N-3 then perform critical-bubble deflection.
     if(doDeflect.size() >= (m_input_unit.size() - 3)) {
-        cout << "<<<<<<<< Initiate the critical bubble delect sequence >>>>>>>>" << endl;
+        cout << "<<<<<<<< Initiate the critical bubble deflect sequence >>>>>>>>" << endl;
+        // take my router-id and swap with downstream router...
+
         return true;
     } else {
         cout << "doDeflect.size(): " << doDeflect.size() << " and (m_input_unit.size() - 3) "\
@@ -294,14 +412,14 @@ Router::wakeup()
             // at TDM_ if router's all inport are occupied.. deflect..
             // exchange bubbles..
             // Critical-Deflect_
-            if((curCycle() == get_net_ptr()->prnt_cycle)) {
-                get_net_ptr()->prnt_cycle += 103;
-                get_net_ptr()->scanNetwork();
-            }
+//            if((curCycle() == get_net_ptr()->prnt_cycle)) {
+//                get_net_ptr()->prnt_cycle += 103;
+//                get_net_ptr()->scanNetwork();
+//            }
             cout << "router_occupancy: "<< router_occupancy << " inputUnit.size(): "\
                 << m_input_unit.size() << " (m_input_unit.size()-2): " << (m_input_unit.size()-2)\
                 << endl;
-            if(((curCycle()%(get_net_ptr()->getNumRouters())) == m_id) &&
+            if(/*((curCycle()%(get_net_ptr()->getNumRouters())) == m_id) &&*/
                 (router_occupancy == (m_input_unit.size()-2))) {
                 // check the occupancy at the router pointed by each outport
                 // of the flit present in this router..
@@ -309,6 +427,7 @@ Router::wakeup()
                 doCriticalDeflect = chk_critical_deflect(m_id);
                 if(doCriticalDeflect == true) {
                     cout << "do bubble deflection " << endl;
+                    bubble_deflect();
                 } else {
                     cout << "don't do bubble deflection " << endl;
                 }

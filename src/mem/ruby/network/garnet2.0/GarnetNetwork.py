@@ -43,6 +43,7 @@ class GarnetNetwork(RubyNetwork):
 
     swizzle_swap = Param.UInt32(0, "To enable swizzleSwap")
     policy = Param.UInt32(0, "Policy to be used applicable when swizzleSwap is 1")
+    tdm = Param.UInt32(0, "when to swizzle; applicable when swizzleSwap is 1")
 
     buffers_per_data_vc = Param.UInt32(4, "buffers per data virtual channel");
     buffers_per_ctrl_vc = Param.UInt32(1, "buffers per ctrl virtual channel");

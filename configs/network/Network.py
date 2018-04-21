@@ -82,6 +82,11 @@ def define_options(parser):
                       help="""policy to be used with swizzleSwap scheme;
                           default is 0; if swizzleSwap enabled then it must
                           be non-zero""")
+    parser.add_option("--tdm", action="store", type="int",
+                      default=0,
+                      help="""when to perform swizzle within a router;
+                          default is 0; if swizzleSwap enabled then it must
+                          be non-zero""")
 def create_network(options, ruby):
 
     # Set the network classes based on the command line options
@@ -138,4 +143,9 @@ def init_network(options, network, InterfaceClass):
         assert(options.network == "garnet2.0")
         print "setting swizzle_swap-policy to: ", options.policy
         network.policy = options.policy
+
+    if options.tdm:
+        assert(options.network == "garnet2.0")
+        print "setting swizzle_tdm to: ", options.tdm
+        network.tdm = options.tdm
 

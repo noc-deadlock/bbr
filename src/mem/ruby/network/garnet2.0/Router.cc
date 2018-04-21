@@ -343,7 +343,9 @@ void
 Router::wakeup()
 {
     DPRINTF(RubyNetwork, "Router %d woke up\n", m_id);
-    cout << "Router-" << m_id << " woke up" << endl;
+    cout << "-------------------------" << endl;
+    cout << "Router-" << m_id << " woke up at cycle: " << curCycle() << endl;
+    cout << "-------------------------" << endl;
     if(get_net_ptr()->isEnableSwizzleSwap() == true  &&
         get_net_ptr()->getPolicy() == MINIMAL_) {
         assert(m_input_unit[critical_inport.id]->vc_isEmpty(0) == true);
@@ -400,29 +402,35 @@ Router::wakeup()
         // option-1: Minimal
         if(get_net_ptr()->getPolicy() == MINIMAL_) {
             int success = -1;
-            success = swapInport();
 
+            // just incremennt the global counter whenever
+            // 'swapInport'returns either 1 or 2
+            // keep a counter for incrementing indivdually as well
+            cout << "this->is_myTurn(): " << this->is_myTurn() << endl;
+            if(this->is_myTurn() == true) {
+                cout << "Doing swizzle at cycle: " << curCycle() << endl;
+                success = swapInport();
+            }
             if(success == 1)
-                cout << "Swap completed with empty input-port..." << endl;
+                cout << "Swizzle completed with empty input-port..." << endl;
             else if (success == 2)
-                cout << "Swap completed with flit with differnt outport"<< endl;
+                cout << "Swizzle completed with flit with differnt outport"<< endl;
             else if (success == 0)
-                cout << "Swap couldn't be completed..." << endl;
+                cout << "Swizzle couldn't be completed..." << endl;
             else
-                fatal("Not possible \n");
+                cout << "not cycle-turn for doing swap..." << endl;
 
             // at TDM_ if router's all inport are occupied.. deflect..
             // exchange bubbles..
             // Critical-Deflect_
-//            if((curCycle() == get_net_ptr()->prnt_cycle)) {
-//                get_net_ptr()->prnt_cycle += 103;
-//                get_net_ptr()->scanNetwork();
-//            }
+            if((curCycle() == get_net_ptr()->prnt_cycle)) {
+                get_net_ptr()->prnt_cycle += 103;
+                get_net_ptr()->scanNetwork();
+            }
             cout << "router_occupancy: "<< router_occupancy << " inputUnit.size(): "\
                 << m_input_unit.size() << " (m_input_unit.size()-2): " << (m_input_unit.size()-2)\
                 << endl;
-            if(/*((curCycle()%(get_net_ptr()->getNumRouters())) == m_id) &&*/
-                (router_occupancy == (m_input_unit.size()-2))) {
+            if(router_occupancy == (m_input_unit.size()-2)) {
                 // check the occupancy at the router pointed by each outport
                 // of the flit present in this router..
                 bool doCriticalDeflect = false;
@@ -437,6 +445,8 @@ Router::wakeup()
             }
         } // option-2: Non-Minimal
         else if(get_net_ptr()->getPolicy() == NON_MINIMAL_) {
+            // Deflection...
+            fatal("Deflection Not working... \n");
             // re-compute the route for all the flits again in deflection.
             // whichever is non-empty
             for (int inport = 0; inport < m_input_unit.size(); inport++) {
@@ -505,6 +515,16 @@ Router::wakeup()
 // packet sitting on the link then don't decrement credits for the bubble...
 int
 Router::swapInport() {
+
+    // If my router is empty then don't do swaps..
+    int inport_;
+    for( inport_ = 0; inport_ < m_input_unit.size(); inport_++) {
+        if(m_input_unit[inport_]->vc_isEmpty(0) == false)
+            break;
+    }
+    if(inport_ == m_input_unit.size())
+        return 0; // don't swap for an empty router..
+
     // two inport-id from where we need to swap
     int inport_full = -1;
     int inport_empty = -1;
@@ -517,7 +537,7 @@ Router::swapInport() {
     int itr_cnt = 0;
     while(1) {
         itr_cnt++;
-        if(itr_cnt >= 100)
+        if(itr_cnt >= 50)
             return 0; // unsuccessful
         // choose a random inport
         int inport_ = random() % (m_input_unit.size());

@@ -144,6 +144,39 @@ class Router : public BasicRouter, public Consumer
                                                       aggregate_fault_prob);
     }
 
+    inline bool
+    is_myTurn() {
+
+        bool ret_val = false;
+        switch (get_net_ptr()->tdm_) {
+            std::cout << "tdm_ : " << get_net_ptr()->tdm_ << std::endl;
+            case _1: {
+                return true;
+                } break;
+            case _2:
+                {ret_val = (curCycle() % 2 == 0) ? true : false;}
+                break;
+            case _4:
+                {ret_val = (curCycle() % 4 == 0) ? true : false;}
+                break;
+            case _8:
+                {ret_val = (curCycle() % 8 == 0) ? true : false;}
+                break;
+            case _16:
+                {ret_val = (curCycle() % 16 == 0) ? true : false;}
+                break;
+            case _32:
+                {ret_val = (curCycle() % 32 == 0) ? true : false;}
+                break;
+            case _64:
+                {ret_val = (curCycle() % 64 == 0) ? true : false;}
+                break;
+            default:
+                assert(0);
+        }
+        return (ret_val);
+    }
+
     uint32_t functionalWrite(Packet *);
 
     RoutingUnit *m_routing_unit;

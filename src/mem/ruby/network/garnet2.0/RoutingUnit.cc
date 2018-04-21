@@ -64,8 +64,7 @@ RoutingUnit::addWeight(int link_weight)
  * Correct weight assignments are critical to provide deadlock avoidance.
  */
 
-int
-RoutingUnit::lookupRoutingTable(int vnet, NetDest msg_destination)
+int RoutingUnit::lookupRoutingTable(int vnet, NetDest msg_destination)
 {
     // First find all possible output link candidates
     // For ordered vnet, just choose the first
@@ -135,8 +134,7 @@ RoutingUnit::addOutDirection(PortDirection outport_dirn, int outport_idx)
 // implementations using port directions rather than a static routing
 // table is provided here.
 
-int
-RoutingUnit::outportCompute(RouteInfo route, int inport,
+int RoutingUnit::outportCompute(RouteInfo route, int inport,
                             PortDirection inport_dirn)
 {
     int outport = -1;
@@ -164,11 +162,17 @@ RoutingUnit::outportCompute(RouteInfo route, int inport,
             outportComputeRandom(route, inport, inport_dirn); break;
         case ADAPT_RAND_: outport =
             outportComputeAdaptRand(route, inport, inport_dirn); break;
+        case WestFirst_: outport =
+            outportComputeWestFirst(route, inport, inport_dirn); break;
+        case ADAPT_WestFirst_: outport =
+            outportComputeAdaptWestFirst(route, inport, inport_dirn); break;
+        case DEFLECTION_: outport =
+            outportComputeXY_Deflection(route, inport, inport_dirn); break;
         // any custom algorithm
         case CUSTOM_: outport =
             outportComputeCustom(route, inport, inport_dirn); break;
-        default: outport =
-            lookupRoutingTable(route.vnet, route.net_dest); break;
+        default:
+                fatal("valid routing algorithm not provided \n"); break;
     }
 
     assert(outport != -1);
@@ -178,8 +182,7 @@ RoutingUnit::outportCompute(RouteInfo route, int inport,
 // XY routing implemented using port directions
 // Only for reference purpose in a Mesh
 // By default Garnet uses the routing table
-int
-RoutingUnit::outportComputeXY(RouteInfo route,
+int RoutingUnit::outportComputeXY(RouteInfo route,
                               int inport,
                               PortDirection inport_dirn)
 {
@@ -208,20 +211,20 @@ RoutingUnit::outportComputeXY(RouteInfo route,
 
     if (x_hops > 0) {
         if (x_dirn) {
-            assert(inport_dirn == "Local" || inport_dirn == "West");
+            // assert(inport_dirn == "Local" || inport_dirn == "West");
             outport_dirn = "East";
         } else {
-            assert(inport_dirn == "Local" || inport_dirn == "East");
+            // assert(inport_dirn == "Local" || inport_dirn == "East");
             outport_dirn = "West";
         }
     } else if (y_hops > 0) {
         if (y_dirn) {
             // "Local" or "South" or "West" or "East"
-            assert(inport_dirn != "North");
+            // assert(inport_dirn != "North");
             outport_dirn = "North";
         } else {
             // "Local" or "North" or "West" or "East"
-            assert(inport_dirn != "South");
+            // assert(inport_dirn != "South");
             outport_dirn = "South";
         }
     } else {
@@ -235,8 +238,7 @@ RoutingUnit::outportComputeXY(RouteInfo route,
 }
 
 // Random Routing
-int
-RoutingUnit::outportComputeRandom(RouteInfo route,
+int RoutingUnit::outportComputeRandom(RouteInfo route,
                                   int inport,
                                   PortDirection inport_dirn)
 {
@@ -296,8 +298,7 @@ RoutingUnit::outportComputeRandom(RouteInfo route,
 }
 
 // Adaptive random routing algorithm...
-int
-RoutingUnit::outportComputeAdaptRand(RouteInfo route,
+int RoutingUnit::outportComputeAdaptRand(RouteInfo route,
                                 int inport,
                                 PortDirection inport_dirn)
 {
@@ -420,8 +421,156 @@ RoutingUnit::outportComputeAdaptRand(RouteInfo route,
     return m_outports_dirn2idx[outport_dirn];
 }
 
-int
-RoutingUnit::outportComputeXY_Deflection(RouteInfo route,
+int RoutingUnit::outportComputeWestFirst(RouteInfo route,
+                                int inport,
+                                PortDirection inport_dirn)
+{
+    PortDirection outport_dirn = "Unknown";
+
+    int num_rows = m_router->get_net_ptr()->getNumRows();
+    int num_cols = m_router->get_net_ptr()->getNumCols();
+    assert(num_rows > 0 && num_cols > 0);
+
+    int my_id = m_router->get_id();
+    int my_x = my_id % num_cols;
+    int my_y = my_id / num_cols;
+
+    int dest_id = route.dest_router;
+    int dest_x = dest_id % num_cols;
+    int dest_y = dest_id / num_cols;
+
+    int x_hops = abs(dest_x - my_x);
+    int y_hops = abs(dest_y - my_y);
+
+    bool x_dirn = (dest_x >= my_x);
+    bool y_dirn = (dest_y >= my_y);
+
+    // already checked that in outportCompute() function
+    assert(!(x_hops == 0 && y_hops == 0));
+
+    int rand = random() % 2;
+
+    if (x_hops == 0)
+    {
+        if (y_dirn > 0)
+            outport_dirn = "North";
+        else
+            outport_dirn = "South";
+    }
+    else if (y_hops == 0)
+    {
+        if (x_dirn > 0)
+            outport_dirn = "East";
+        else
+            outport_dirn = "West";
+    }
+    else if (!(x_dirn))
+    {
+        outport_dirn = "West";
+    }
+    else if (y_dirn)
+    {
+        outport_dirn = rand ? "East" : "North";
+    }
+    else if (!(y_dirn))
+    {
+        outport_dirn = rand ? "East" : "South";
+    }
+
+    return m_outports_dirn2idx[outport_dirn];
+
+}
+
+
+int RoutingUnit::outportComputeAdaptWestFirst(RouteInfo route,
+                                int inport,
+                                PortDirection inport_dirn)
+{
+    PortDirection outport_dirn = "Unknown";
+
+    int num_rows = m_router->get_net_ptr()->getNumRows();
+    int num_cols = m_router->get_net_ptr()->getNumCols();
+    assert(num_rows > 0 && num_cols > 0);
+
+    int my_id = m_router->get_id();
+    int my_x = my_id % num_cols;
+    int my_y = my_id / num_cols;
+
+    int dest_id = route.dest_router;
+    int dest_x = dest_id % num_cols;
+    int dest_y = dest_id / num_cols;
+
+    int x_hops = abs(dest_x - my_x);
+    int y_hops = abs(dest_y - my_y);
+
+    bool x_dirn = (dest_x >= my_x);
+    bool y_dirn = (dest_y >= my_y);
+
+    // already checked that in outportCompute() function
+    assert(!(x_hops == 0 && y_hops == 0));
+    int rand = random() % 2;
+    Router *router_Est, *router_South, *router_Nrth;
+    if (x_hops == 0)
+    {
+        if (y_dirn > 0)
+            outport_dirn = "North";
+        else
+            outport_dirn = "South";
+    }
+    else if (y_hops == 0)
+    {
+        if (x_dirn > 0)
+            outport_dirn = "East";
+        else
+            outport_dirn = "West";
+    }
+    else if (!(x_dirn))
+    {
+        outport_dirn = "West";
+    }
+    else if (y_dirn)
+    {
+        router_Est = m_router->get_net_ptr()->\
+            get_RouterInDirn( "East", m_router->get_id());
+        router_Nrth = m_router->get_net_ptr()->\
+            get_RouterInDirn( "North", m_router->get_id());
+        // caution: 'dirn_' is the direction of inport of
+        // downstream router
+        int freeVC_East = router_Est->get_numFreeVC("West");
+        int freeVC_North = router_Nrth->get_numFreeVC("South");
+
+        if (freeVC_East > freeVC_North)
+            outport_dirn = "East";
+        else if (freeVC_North > freeVC_East)
+            outport_dirn = "North";
+        else
+            outport_dirn = rand ? "East" : "North";
+    }
+    else if (!(y_dirn))
+    {
+        router_Est = m_router->get_net_ptr()->\
+            get_RouterInDirn( "East", m_router->get_id());
+        router_South = m_router->get_net_ptr()->\
+            get_RouterInDirn( "South", m_router->get_id());
+
+        int freeVC_East = router_Est->get_numFreeVC("West");
+        int freeVC_South = router_South->get_numFreeVC("North");
+
+        if (freeVC_South > freeVC_East)
+            outport_dirn = "South";
+        else if (freeVC_East > freeVC_South)
+            outport_dirn = "East";
+        else
+            outport_dirn = rand ? "East" : "South";
+
+    }
+
+    return m_outports_dirn2idx[outport_dirn];
+
+}
+
+
+int RoutingUnit::outportComputeXY_Deflection(RouteInfo route,
                                 int inport,
                                 PortDirection inport_dirn)
 {
@@ -546,8 +695,7 @@ RoutingUnit::outportComputeXY_Deflection(RouteInfo route,
 }
 
 
-int
-RoutingUnit::numFreeVC(PortDirection dirn_/*outport_dirn of this router*/)
+int RoutingUnit::numFreeVC(PortDirection dirn_/*outport_dirn of this router*/)
 {
     Router* downstreamRouter;
 //    cout << "my_id: " << m_router->get_id() << endl;
@@ -571,8 +719,7 @@ RoutingUnit::numFreeVC(PortDirection dirn_/*outport_dirn of this router*/)
 
 // Template for implementing custom routing algorithm
 // using port directions. (Example adaptive)
-int
-RoutingUnit::outportComputeCustom(RouteInfo route,
+int RoutingUnit::outportComputeCustom(RouteInfo route,
                                  int inport,
                                  PortDirection inport_dirn)
 {

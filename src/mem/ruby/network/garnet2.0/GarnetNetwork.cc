@@ -68,6 +68,7 @@ GarnetNetwork::GarnetNetwork(const Params *p)
     m_buffers_per_ctrl_vc = p->buffers_per_ctrl_vc;
     m_routing_algorithm = p->routing_algorithm;
 
+    tdm_ = p->tdm;
     m_swizzleSwap = p->swizzle_swap;
     m_policy = p->policy;
     prnt_cycle = 800;

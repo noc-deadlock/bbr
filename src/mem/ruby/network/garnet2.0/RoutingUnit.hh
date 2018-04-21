@@ -75,6 +75,12 @@ class RoutingUnit
     int outportComputeAdaptRand(RouteInfo route,
                             int inport,
                             PortDirection inport_dirn);
+    int outportComputeWestFirst(RouteInfo route,
+                            int inport,
+                            PortDirection inport_dirn);
+    int outportComputeAdaptWestFirst(RouteInfo route,
+                            int inport,
+                            PortDirection inport_dirn);
 
     int outportComputeXY_Deflection(RouteInfo route,
                             int inport,

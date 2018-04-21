@@ -33,7 +33,7 @@
 
 #ifndef __MEM_RUBY_NETWORK_GARNET2_0_COMMONTYPES_HH__
 #define __MEM_RUBY_NETWORK_GARNET2_0_COMMONTYPES_HH__
-#define MY_PRINT 1
+#define MY_PRINT 0
 
 #include "mem/ruby/common/NetDest.hh"
 

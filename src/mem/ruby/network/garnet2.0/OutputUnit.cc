@@ -68,9 +68,6 @@ OutputUnit::decrement_credit(int out_vc)
     DPRINTF(RubyNetwork, "Router %d OutputUnit %d decrementing credit for "
             "outvc %d at time: %lld\n",
             m_router->get_id(), m_id, out_vc, m_router->curCycle());
-    printf("Router %d OutputUnit %d decrementing credit for "
-            "outvc %d at time: %ld\n",
-            m_router->get_id(), m_id, out_vc, (long)m_router->curCycle());
 
     m_outvc_state[out_vc]->decrement_credit();
 }
@@ -79,9 +76,6 @@ void
 OutputUnit::increment_credit(int out_vc)
 {
     DPRINTF(RubyNetwork, "Router %d OutputUnit %d incrementing credit for "
-            "outvc %d at time: %ld\n",
-            m_router->get_id(), m_id, out_vc, (long)m_router->curCycle());
-    printf("Router %d OutputUnit %d incrementing credit for "
             "outvc %d at time: %ld\n",
             m_router->get_id(), m_id, out_vc, (long)m_router->curCycle());
 

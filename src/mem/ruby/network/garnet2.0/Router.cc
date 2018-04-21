@@ -187,11 +187,12 @@ Router::bubble_deflect()
             // 1. Try mutual routing..
             // 2. Try mis routing
             // 3. don't misroute "Local" outport flit
+            #if (MY_PRINT)
             cout << "inp_: " << inp_ << " getInportDirection(inp_): " <<
                     getInportDirection(inp_) << endl;
+            #endif
             Router* upstream_ = get_net_ptr()->\
                         get_RouterInDirn(getInportDirection(inp_), m_id);
-            cout << "upstream_ id: " << upstream_->get_id() << " my-id: " << m_id << endl;
             PortDirection towards_me_ = input_output_dirn_map(getInportDirection(inp_));
             std::vector<InputUnit *> upstream_inpUnit = upstream_->get_inputUnit_ref();
             // 1. mutual-routing loop
@@ -232,7 +233,9 @@ Router::bubble_deflect()
                 upstream_inpUnit[upstrm_inp_]->insertFlit(0, t_flit1);
                 // routing for these flits..
 
+                #if (MY_PRINT)
                 cout << "Deflection successful via mutual routing..." << endl;
+                #endif
                 // update the stats:
                 get_net_ptr()->num_routed_bubbleSwaps++;
                 get_net_ptr()->num_bubbleSwaps++;
@@ -277,14 +280,19 @@ Router::bubble_deflect()
                                                 m_inports_idx2dirn[upstrm_inp_]);
                     upstream_inpUnit[upstrm_inp_]->insertFlit(0, t_flit1);
 
-                    cout << "Deflection successful via without routing..." << endl;
+                    #if (MY_PRINT)
+                        cout << "Deflection successful via without routing..." << endl;
+                    #endif
                     // Stats
                     get_net_ptr()->num_bubbleSwaps++;
                     // return
                     return;
                 }
                 else {
-                    cout << "Deflection not successful..." << endl;
+
+                    #if (MY_PRINT)
+                        cout << "Deflection not successful..." << endl;
+                    #endif
                     return;
                 }
             }
@@ -324,21 +332,25 @@ Router::chk_critical_deflect(int my_id)
         // after this loop if router_occupancy == N-2 then add the bit in 'doDeflect'
         // vector.
         if(router_occupancy == (input_unit_.size() - 2)) {
+        #if (MY_PRINT)
             cout << "increasing the space of deflection vector"\
                 " for doing bubble deflection" << endl;
+        #endif
             doDeflect.push_back(1);
         }
     }
     // if the size of 'doDeflect' vector is N-3 then perform critical-bubble deflection.
     if(doDeflect.size() >= (m_input_unit.size() - 3)) {
-        cout << "<<<<<<<< Initiate the critical bubble deflect sequence >>>>>>>>" << endl;
-        // take my router-id and swap with downstream router...
-
+        #if (MY_PRINT)
+            cout << "<<<<<<<< Initiate the critical bubble deflect sequence >>>>>>>>" << endl;
+        #endif
         return true;
     } else {
-        cout << "doDeflect.size(): " << doDeflect.size() << " and (m_input_unit.size() - 3) "\
-            << (m_input_unit.size() - 3) << endl;
-        cout << "therefore can't initiate the bubble deflection sequence "<< endl;
+        #if (MY_PRINT)
+            cout << "doDeflect.size(): " << doDeflect.size() << " and (m_input_unit.size() - 3) "\
+                << (m_input_unit.size() - 3) << endl;
+            cout << "therefore can't initiate the bubble deflection sequence "<< endl;
+        #endif
         return false;
     }
 
@@ -348,9 +360,12 @@ void
 Router::wakeup()
 {
     DPRINTF(RubyNetwork, "Router %d woke up\n", m_id);
+
+    #if (MY_PRINT)
     cout << "-------------------------" << endl;
     cout << "Router-" << m_id << " woke up at cycle: " << curCycle() << endl;
     cout << "-------------------------" << endl;
+    #endif
     if(get_net_ptr()->isEnableSwizzleSwap() == true  &&
         get_net_ptr()->getPolicy() == MINIMAL_) {
         assert(m_input_unit[critical_inport.id]->vc_isEmpty(0) == true);
@@ -382,11 +397,15 @@ Router::wakeup()
             if(routr_->get_outputUnit_ref()[upstream_outputUnit_id]->is_vc_critical(0)
                 == true) {
                 critical_vc_cnt++;
+                #if(MY_PRINT)
                 cout << "critical_vc_cnt: " << critical_vc_cnt << " from router-id: "\
                     <<routr_->get_id()<< endl;
+                #endif
             }
         }
+        #if (MY_PRINT)
         cout << "critical_vc_cnt: " << critical_vc_cnt << endl;
+        #endif
         assert(critical_vc_cnt == 1);
     }
 
@@ -411,45 +430,54 @@ Router::wakeup()
             // just incremennt the global counter whenever
             // 'swapInport'returns either 1 or 2
             // keep a counter for incrementing indivdually as well
-            cout << "this->is_myTurn(): " << this->is_myTurn() << endl;
             if(this->is_myTurn() == true) {
+                #if (MY_PRINT)
                 cout << "Doing swizzle at cycle: " << curCycle() << endl;
+                #endif
                 success = swapInport();
             }
             if(success == 1) {
                 get_net_ptr()->num_bubbleSwizzles++;
+
+                #if (MY_PRINT)
                 cout << "Swizzle completed with empty input-port..." << endl;
+                #endif
             }
             else if (success == 2) {
                 get_net_ptr()->num_bubbleSwizzles++;
+                #if (MY_PRINT)
                 cout << "Swizzle completed with flit with differnt outport"<< endl;
+                #endif
             }
             else if (success == 0) {
+                #if (MY_PRINT)
                 cout << "Swizzle couldn't be completed..." << endl;
+                #endif
             }
-            else
+            else {
+                #if (MY_PRINT)
                 cout << "not cycle-turn for doing swap..." << endl;
-
-            // at TDM_ if router's all inport are occupied.. deflect..
-            // exchange bubbles..
-            // Critical-Deflect_
-//            if((curCycle() == get_net_ptr()->prnt_cycle)) {
-//                get_net_ptr()->prnt_cycle += 103;
-//                get_net_ptr()->scanNetwork();
-//            }
+                #endif
+            }
+            #if (MY_PRINT)
             cout << "router_occupancy: "<< router_occupancy << " inputUnit.size(): "\
                 << m_input_unit.size() << " (m_input_unit.size()-2): " << (m_input_unit.size()-2)\
                 << endl;
+            #endif
             if(router_occupancy == (m_input_unit.size()-2)) {
                 // check the occupancy at the router pointed by each outport
                 // of the flit present in this router..
                 bool doCriticalDeflect = false;
                 doCriticalDeflect = chk_critical_deflect(m_id);
                 if(doCriticalDeflect == true) {
+                    #if (MY_PRINT)
                     cout << "do bubble deflection " << endl;
+                    #endif
                     bubble_deflect();
                 } else {
+                    #if (MY_PRINT)
                     cout << "don't do bubble deflection " << endl;
+                    #endif
                 }
 
             }
@@ -623,21 +651,6 @@ Router::swapInport() {
         critical_inport.dirn = getInportDirection(inport_empty);
         return 1;
     }
-
-//    #if(MY_PRINT)
-//        cout << "--------------------------" << endl;
-//        cout << "Router-id:  " << m_id << "  Cycle: " << curCycle() << endl;
-//        cout << "--------------------------" << endl;
-//    #endif
-//    if ((inport_full != -1) && (inport_empty != -1)) {
-//        #if(MY_PRINT)
-//            cout << "Non-Empty inport is: " << inport_full << " direction: " << getInportDirection(inport_full) << endl;
-//            cout << "flit present: " << *m_input_unit[inport_full]->peekTopFlit(0) << endl;
-//            cout << "Empty inport is: " << inport_empty << " direction: " << getInportDirection(inport_empty) << endl;
-//        #endif
-//        critical_swap(inport_empty, inport_full);
-//        return 1;
-//    }
 
     return 0;
 }

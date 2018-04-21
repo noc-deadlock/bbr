@@ -227,9 +227,10 @@ SwitchAllocator::arbitrate_outports()
                 t_flit->set_vc(outvc);
 
                 // decrement credit in outvc
+                #if(MY_PRINT)
                 cout << "decrementing credit in outvc: router " << m_router->get_id()
                         << " outport: " << outport << " direction: " << m_output_unit[outport]->get_direction() << endl;
-
+                #endif
                 m_output_unit[outport]->decrement_credit(outvc); // decrement credit here..
                                                                 // but outVC was alredy ACTIVE_
                                                                 // at this time
@@ -251,12 +252,14 @@ SwitchAllocator::arbitrate_outports()
 
                     // Send a credit back
                     // along with the information that this VC is now idle
+                    #if(MY_PRINT)
                     cout << "scheduled increment_credit for inport: " << inport
                                 <<" direction: " << m_input_unit[inport]->get_direction() << endl;
                     cout <<"paket sent to outport: " << outport << " in direction opp. to: "
                                 << m_output_unit[outport]->get_direction() << endl;
                     cout << "schedule consumption by link: " << m_router->curCycle() + 1 << endl;
                     cout << "schedule consumption by router: " << m_router->curCycle() + 2 << endl;
+                    #endif
                     m_input_unit[inport]->increment_credit(invc, true,
                         m_router->curCycle());
                 } else {

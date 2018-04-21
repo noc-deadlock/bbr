@@ -149,7 +149,6 @@ class Router : public BasicRouter, public Consumer
 
         bool ret_val = false;
         switch (get_net_ptr()->tdm_) {
-            std::cout << "tdm_ : " << get_net_ptr()->tdm_ << std::endl;
             case _1: {
                 return true;
                 } break;

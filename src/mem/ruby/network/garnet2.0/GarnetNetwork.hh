@@ -154,6 +154,10 @@ class GarnetNetwork : public Network
     }
     uint32_t prnt_cycle;
     uint32_t tdm_;
+    Stats::Scalar num_bubbleSwizzles;
+    Stats::Scalar num_bubbleSwaps;
+    Stats::Scalar num_routed_bubbleSwaps;
+
   protected:
     // Configuration
     int m_num_rows;

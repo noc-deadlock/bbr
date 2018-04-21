@@ -233,6 +233,9 @@ Router::bubble_deflect()
                 // routing for these flits..
 
                 cout << "Deflection successful via mutual routing..." << endl;
+                // update the stats:
+                get_net_ptr()->num_routed_bubbleSwaps++;
+                get_net_ptr()->num_bubbleSwaps++;
                 // return
                 return;
             }
@@ -275,6 +278,8 @@ Router::bubble_deflect()
                     upstream_inpUnit[upstrm_inp_]->insertFlit(0, t_flit1);
 
                     cout << "Deflection successful via without routing..." << endl;
+                    // Stats
+                    get_net_ptr()->num_bubbleSwaps++;
                     // return
                     return;
                 }
@@ -411,22 +416,27 @@ Router::wakeup()
                 cout << "Doing swizzle at cycle: " << curCycle() << endl;
                 success = swapInport();
             }
-            if(success == 1)
+            if(success == 1) {
+                get_net_ptr()->num_bubbleSwizzles++;
                 cout << "Swizzle completed with empty input-port..." << endl;
-            else if (success == 2)
+            }
+            else if (success == 2) {
+                get_net_ptr()->num_bubbleSwizzles++;
                 cout << "Swizzle completed with flit with differnt outport"<< endl;
-            else if (success == 0)
+            }
+            else if (success == 0) {
                 cout << "Swizzle couldn't be completed..." << endl;
+            }
             else
                 cout << "not cycle-turn for doing swap..." << endl;
 
             // at TDM_ if router's all inport are occupied.. deflect..
             // exchange bubbles..
             // Critical-Deflect_
-            if((curCycle() == get_net_ptr()->prnt_cycle)) {
-                get_net_ptr()->prnt_cycle += 103;
-                get_net_ptr()->scanNetwork();
-            }
+//            if((curCycle() == get_net_ptr()->prnt_cycle)) {
+//                get_net_ptr()->prnt_cycle += 103;
+//                get_net_ptr()->scanNetwork();
+//            }
             cout << "router_occupancy: "<< router_occupancy << " inputUnit.size(): "\
                 << m_input_unit.size() << " (m_input_unit.size()-2): " << (m_input_unit.size()-2)\
                 << endl;
@@ -577,6 +587,7 @@ Router::swapInport() {
     if(inport_empty == -1) {
         //swap between 'input_full' and 'critical id'
         critical_swap(critical_inport.id, inport_full);
+        return 2;
     }
     else if(inport_full == -1) {
 
@@ -610,23 +621,23 @@ Router::swapInport() {
         // update the critical inport structure here...
         critical_inport.id = inport_empty;
         critical_inport.dirn = getInportDirection(inport_empty);
-
-    }
-
-    #if(MY_PRINT)
-        cout << "--------------------------" << endl;
-        cout << "Router-id:  " << m_id << "  Cycle: " << curCycle() << endl;
-        cout << "--------------------------" << endl;
-    #endif
-    if ((inport_full != -1) && (inport_empty != -1)) {
-        #if(MY_PRINT)
-            cout << "Non-Empty inport is: " << inport_full << " direction: " << getInportDirection(inport_full) << endl;
-            cout << "flit present: " << *m_input_unit[inport_full]->peekTopFlit(0) << endl;
-            cout << "Empty inport is: " << inport_empty << " direction: " << getInportDirection(inport_empty) << endl;
-        #endif
-        critical_swap(inport_empty, inport_full);
         return 1;
     }
+
+//    #if(MY_PRINT)
+//        cout << "--------------------------" << endl;
+//        cout << "Router-id:  " << m_id << "  Cycle: " << curCycle() << endl;
+//        cout << "--------------------------" << endl;
+//    #endif
+//    if ((inport_full != -1) && (inport_empty != -1)) {
+//        #if(MY_PRINT)
+//            cout << "Non-Empty inport is: " << inport_full << " direction: " << getInportDirection(inport_full) << endl;
+//            cout << "flit present: " << *m_input_unit[inport_full]->peekTopFlit(0) << endl;
+//            cout << "Empty inport is: " << inport_empty << " direction: " << getInportDirection(inport_empty) << endl;
+//        #endif
+//        critical_swap(inport_empty, inport_full);
+//        return 1;
+//    }
 
     return 0;
 }

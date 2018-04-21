@@ -522,6 +522,13 @@ GarnetNetwork::regStats()
     m_average_link_utilization
         .name(name() + ".avg_link_utilization");
 
+    num_bubbleSwizzles
+        .name(name() + ".bubble_swizzles");
+    num_bubbleSwaps
+        .name(name() + ".bubble_swaps");
+    num_routed_bubbleSwaps
+        .name(name() + ".routed_bubble_swaps");
+
     m_average_vc_load
         .init(m_virtual_networks * m_vcs_per_vnet)
         .name(name() + ".avg_vc_load")

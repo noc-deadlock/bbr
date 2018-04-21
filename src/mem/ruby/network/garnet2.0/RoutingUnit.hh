@@ -72,6 +72,15 @@ class RoutingUnit
                          int inport,
                          PortDirection inport_dirn);
 
+    int outportComputeAdaptRand(RouteInfo route,
+                            int inport,
+                            PortDirection inport_dirn);
+
+    int outportComputeXY_Deflection(RouteInfo route,
+                            int inport,
+                            PortDirection inport_dirn);
+
+    int numFreeVC(PortDirection dirn_);
     // Custom Routing Algorithm using Port Directions
     int outportComputeCustom(RouteInfo route,
                              int inport,

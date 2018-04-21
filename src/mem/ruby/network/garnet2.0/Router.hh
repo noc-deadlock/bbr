@@ -122,6 +122,7 @@ class Router : public BasicRouter, public Consumer
     void bubble_deflect();
     void critical_swap(int critical_inport_id, int inport_id);
     bool chk_critical_deflect(int my_id);
+    int get_numFreeVC(PortDirection dirn_);
     uint32_t inport_occupancy; // at any point it tells number of inport occupied
                                 // of this router
     bool is_critical; // tells if this router is cretical => has a free inport

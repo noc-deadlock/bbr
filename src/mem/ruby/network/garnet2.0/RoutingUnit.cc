@@ -162,6 +162,8 @@ RoutingUnit::outportCompute(RouteInfo route, int inport,
             outportComputeXY(route, inport, inport_dirn); break;
         case RANDOM_: outport =
             outportComputeRandom(route, inport, inport_dirn); break;
+        case ADAPT_RAND_: outport =
+            outportComputeAdaptRand(route, inport, inport_dirn); break;
         // any custom algorithm
         case CUSTOM_: outport =
             outportComputeCustom(route, inport, inport_dirn); break;
@@ -293,6 +295,279 @@ RoutingUnit::outportComputeRandom(RouteInfo route,
     return m_outports_dirn2idx[outport_dirn];
 }
 
+// Adaptive random routing algorithm...
+int
+RoutingUnit::outportComputeAdaptRand(RouteInfo route,
+                                int inport,
+                                PortDirection inport_dirn)
+{
+    PortDirection outport_dirn = "Unknown";
+
+    int num_rows = m_router->get_net_ptr()->getNumRows();
+    int num_cols = m_router->get_net_ptr()->getNumCols();
+    assert(num_rows > 0 && num_cols > 0);
+
+    int my_id = m_router->get_id();
+    int my_x = my_id % num_cols;
+    int my_y = my_id / num_cols;
+
+    int dest_id = route.dest_router;
+    int dest_x = dest_id % num_cols;
+    int dest_y = dest_id / num_cols;
+
+    int x_hops = abs(dest_x - my_x);
+    int y_hops = abs(dest_y - my_y);
+
+    bool x_dirn = (dest_x >= my_x);
+    bool y_dirn = (dest_y >= my_y);
+
+    // already checked that in outportCompute() function
+    assert(!(x_hops == 0 && y_hops == 0));
+
+    if (x_hops == 0)
+    {
+        if (y_dirn > 0)
+            outport_dirn = "North";
+        else
+            outport_dirn = "South";
+    }
+    else if (y_hops == 0)
+    {
+        if (x_dirn > 0)
+            outport_dirn = "East";
+        else
+            outport_dirn = "West";
+    }
+    else
+    {
+        // whichever router has more free VCs route there
+        int rand = random() % 2;
+        Router *router_Est, *router_Wst, *router_South, *router_Nrth;
+        if (x_dirn && y_dirn) {// Quadrant I
+            // check for routers in both 'East' and 'North'
+            // direction
+            router_Est = m_router->get_net_ptr()->\
+                get_RouterInDirn( "East", m_router->get_id());
+            router_Nrth = m_router->get_net_ptr()->\
+                get_RouterInDirn( "North", m_router->get_id());
+            // caution: 'dirn_' is the direction of inport of
+            // downstream router
+            int freeVC_East = router_Est->get_numFreeVC("West");
+            int freeVC_North = router_Nrth->get_numFreeVC("South");
+
+            if (freeVC_East > freeVC_North)
+                outport_dirn = "East";
+            else if (freeVC_North > freeVC_East)
+                outport_dirn = "North";
+            else
+                outport_dirn = rand ? "East" : "North";
+
+        }
+        else if (!x_dirn && y_dirn) {// Quadrant II
+
+            router_Wst = m_router->get_net_ptr()->\
+                get_RouterInDirn( "West", m_router->get_id());
+            router_Nrth = m_router->get_net_ptr()->\
+                get_RouterInDirn( "North", m_router->get_id());
+
+            int freeVC_West = router_Wst->get_numFreeVC("East");
+            int freeVC_North = router_Nrth->get_numFreeVC("South");
+
+            if (freeVC_North > freeVC_West)
+                outport_dirn = "North";
+            else if (freeVC_West > freeVC_North)
+                outport_dirn = "West";
+            else
+                outport_dirn = rand ? "West" : "North";
+
+        }
+        else if (!x_dirn && !y_dirn) {// Quadrant III
+
+            router_Wst = m_router->get_net_ptr()->\
+                get_RouterInDirn( "West", m_router->get_id());
+            router_South = m_router->get_net_ptr()->\
+                get_RouterInDirn( "South", m_router->get_id());
+
+            int freeVC_West = router_Wst->get_numFreeVC("East");
+            int freeVC_South = router_South->get_numFreeVC("North");
+
+            if (freeVC_South > freeVC_West)
+                outport_dirn = "South";
+            else if (freeVC_West > freeVC_South)
+                outport_dirn = "West";
+            else
+                outport_dirn = rand ? "West" : "South";
+        }
+        else {// Quadrant IV
+
+            router_Est = m_router->get_net_ptr()->\
+                get_RouterInDirn( "East", m_router->get_id());
+            router_South = m_router->get_net_ptr()->\
+                get_RouterInDirn( "South", m_router->get_id());
+
+            int freeVC_East = router_Est->get_numFreeVC("West");
+            int freeVC_South = router_South->get_numFreeVC("North");
+
+            if (freeVC_South > freeVC_East)
+                outport_dirn = "South";
+            else if (freeVC_East > freeVC_South)
+                outport_dirn = "East";
+            else
+                outport_dirn = rand ? "East" : "South";
+        }
+    }
+
+    return m_outports_dirn2idx[outport_dirn];
+}
+
+int
+RoutingUnit::outportComputeXY_Deflection(RouteInfo route,
+                                int inport,
+                                PortDirection inport_dirn)
+{
+    PortDirection outport_dirn = "Unknown";
+
+    // Idea is to use XY_ as baseline routing
+    // and mis-route whenever there is no empty VC
+    // present in the outport dictated by XY_
+    int outportId = outportComputeXY(route, inport, inport_dirn);
+    outport_dirn = m_outports_idx2dirn[outportId];
+    int num_free_vc = numFreeVC(outport_dirn); // outport dirn_ relative to this router
+
+    if(outport_dirn == "North" &&
+        num_free_vc == 0) {
+        // Route it to East_ or West_ whichever has
+        // higher VC.. if both have 0 then don't change
+        // outport_dirn
+        //------------------------------------
+
+        // if dirn outport direction East exist
+        int idx= -1;
+        int freeVCEast = 0;
+        int freeVCWest = 0;
+        for(idx = 0; idx < m_router->get_num_outports(); ++idx) {
+            if(m_outports_idx2dirn[idx] == "East")
+                freeVCEast = numFreeVC("East");
+        // if outport dirn West exist
+            if(m_outports_idx2dirn[idx] == "West")
+                freeVCWest = numFreeVC("West");
+        }
+
+        if (freeVCEast == 0 && freeVCWest == 0) {
+        }
+        else if (freeVCEast >= freeVCWest) {
+            outport_dirn = "East";
+        } else {
+            outport_dirn = "West";
+        }
+    }
+    else if ( outport_dirn == "East" &&
+        num_free_vc == 0) {
+        // Route it to North_ or South_ whichever has
+        // higher VC.. if both have 0 then don't change
+        // outport_dirn
+        int idx = -1;
+        int freeVCNorth = 0;
+        int freeVCSouth = 0;
+        for(idx = 0; idx < m_router->get_num_outports(); ++idx) {
+            if(m_outports_idx2dirn[idx] == "North")
+                freeVCNorth = numFreeVC("North");
+            if(m_outports_idx2dirn[idx] == "South")
+                freeVCSouth = numFreeVC("South");
+        }
+
+        if (freeVCNorth == 0 && freeVCSouth == 0) {
+        }
+        else if (freeVCNorth >= freeVCSouth) {
+            outport_dirn = "North";
+        } else {
+            outport_dirn = "South";
+        }
+    }
+    else if ( outport_dirn == "West" &&
+        num_free_vc == 0) {
+        // Route it to North_ or South_ whichever has
+        // higher VC.. if both have 0 then don't change
+        // outport_dirn
+        int idx = -1;
+        int freeVCNorth = 0;
+        int freeVCSouth = 0;
+        for(idx = 0; idx < m_router->get_num_outports(); ++idx) {
+            if(m_outports_idx2dirn[idx] == "North")
+                freeVCNorth = numFreeVC("North");
+            if(m_outports_idx2dirn[idx] == "South")
+                freeVCSouth = numFreeVC("South");
+        }
+
+        if (freeVCNorth == 0 && freeVCSouth == 0) {
+        }
+        else if (freeVCNorth > freeVCSouth) {
+            outport_dirn = "North";
+        } else {
+            outport_dirn = "South";
+        }
+
+    }
+    else if ( outport_dirn == "South" &&
+        num_free_vc == 0) {
+        // Route it to East_ or West_ whichever has
+        // higher VC.. if both have 0 then don't change
+        // outport_dirn
+
+        // if dirn outport direction East exist
+        int idx= -1;
+        int freeVCEast = 0;
+        int freeVCWest = 0;
+        for(idx = 0; idx < m_router->get_num_outports(); ++idx) {
+            if(m_outports_idx2dirn[idx] == "East")
+                freeVCEast = numFreeVC("East");
+        // if outport dirn West exist
+            if(m_outports_idx2dirn[idx] == "West")
+                freeVCWest = numFreeVC("West");
+        }
+        if (freeVCEast == 0 && freeVCWest == 0) {
+        }
+        else if (freeVCEast > freeVCWest) {
+            outport_dirn = "East";
+        } else {
+            outport_dirn = "West";
+        }
+    }
+    else if (num_free_vc == 0) {
+        // if control comes here, then it means
+        // outport dirn was something other than
+        // "North"--"East"--"West"--"South"
+        // which shouldn't happen
+        assert(0); // shouldn't come here..
+    }
+
+    return m_outports_dirn2idx[outport_dirn];
+
+}
+
+
+int
+RoutingUnit::numFreeVC(PortDirection dirn_/*outport_dirn of this router*/)
+{
+    Router* downstreamRouter;
+//    cout << "my_id: " << m_router->get_id() << endl;
+    downstreamRouter = m_router->get_net_ptr()->\
+            get_RouterInDirn( dirn_, m_router->get_id());
+
+    if (downstreamRouter == NULL)
+        return 0; // effectively there's no output-port in that dirn
+
+    if( dirn_ == "North")
+            return (downstreamRouter->get_numFreeVC("South"));
+    else if ( dirn_ == "East")
+        return (downstreamRouter->get_numFreeVC("West"));
+    else if ( dirn_ == "West")
+        return (downstreamRouter->get_numFreeVC("East"));
+    else if (dirn_ == "South")
+        return (downstreamRouter->get_numFreeVC("North"));
+    else
+        assert(0); // shouldn't come here..
+}
 
 // Template for implementing custom routing algorithm
 // using port directions. (Example adaptive)

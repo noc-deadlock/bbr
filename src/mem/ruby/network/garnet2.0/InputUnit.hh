@@ -156,6 +156,18 @@ class InputUnit : public Consumer
         m_vcs[vc_id]->insertFlit(t_flit);
     }
 
+   inline int
+   get_numFreeVC(PortDirection dirn_) {
+      assert(dirn_ == m_direction);
+      int freeVC = 0;
+      // since we always use vnet=0
+      for (int vc_=0; vc_ < m_vc_per_vnet; ++vc_) {
+           if(m_vcs[vc_]->isEmpty() == true)
+              freeVC++;
+      }
+      return freeVC;
+   }
+
 
   NetworkLink *m_in_link; // making it public for api to be used
   CreditLink *m_credit_link;

@@ -88,26 +88,27 @@ Router::init()
     // and then put an assert in the wakeup
     // that its never disabled and never points
     // to "Local_"
-    for(int inport=0; inport < m_input_unit.size(); inport++) {
-        if(m_input_unit[inport]->get_direction() != "Local") {
-            critical_inport.id = inport;
-            critical_inport.dirn = m_input_unit[inport]->get_direction();
-            assert(m_input_unit[inport]->vc_isEmpty(0) == true);
-            break;
+    if(get_net_ptr()->getPolicy() == MINIMAL_) {
+        for(int inport=0; inport < m_input_unit.size(); inport++) {
+            if(m_input_unit[inport]->get_direction() != "Local") {
+                critical_inport.id = inport;
+                critical_inport.dirn = m_input_unit[inport]->get_direction();
+                assert(m_input_unit[inport]->vc_isEmpty(0) == true);
+                break;
+            }
         }
+        // initialize outVcState of upstream router as well...
+        Router* router_ = get_net_ptr()->\
+                get_RouterInDirn(getInportDirection(critical_inport.id), m_id);
+        // get outputUnit direction in router_
+        PortDirection upstream_outputUnit_dirn =
+                input_output_dirn_map(getInportDirection(critical_inport.id));
+        // get id for that direction in router_
+        int upstream_outputUnit_id =
+                router_->m_routing_unit->m_outports_dirn2idx[upstream_outputUnit_dirn];
+
+        router_->get_outputUnit_ref()[upstream_outputUnit_id]->set_vc_critical(0, true);
     }
-    // initialize outVcState of upstream router as well...
-    Router* router_ = get_net_ptr()->\
-            get_RouterInDirn(getInportDirection(critical_inport.id), m_id);
-    // get outputUnit direction in router_
-    PortDirection upstream_outputUnit_dirn =
-            input_output_dirn_map(getInportDirection(critical_inport.id));
-    // get id for that direction in router_
-    int upstream_outputUnit_id =
-            router_->m_routing_unit->m_outports_dirn2idx[upstream_outputUnit_dirn];
-
-    router_->get_outputUnit_ref()[upstream_outputUnit_id]->set_vc_critical(0, true);
-
     m_sw_alloc->init();
     m_switch->init();
 }
@@ -343,7 +344,8 @@ Router::wakeup()
 {
     DPRINTF(RubyNetwork, "Router %d woke up\n", m_id);
     cout << "Router-" << m_id << " woke up" << endl;
-    if(get_net_ptr()->isEnableSwizzleSwap() == true) {
+    if(get_net_ptr()->isEnableSwizzleSwap() == true  &&
+        get_net_ptr()->getPolicy() == MINIMAL_) {
         assert(m_input_unit[critical_inport.id]->vc_isEmpty(0) == true);
         assert(m_input_unit[critical_inport.id]->get_direction() != "Local");
         assert(m_input_unit[critical_inport.id]->get_direction() ==
@@ -435,7 +437,32 @@ Router::wakeup()
             }
         } // option-2: Non-Minimal
         else if(get_net_ptr()->getPolicy() == NON_MINIMAL_) {
-            fatal("Not implemented \n"); // implement deflection here
+            // re-compute the route for all the flits again in deflection.
+            // whichever is non-empty
+            for (int inport = 0; inport < m_input_unit.size(); inport++) {
+                if (m_input_unit[inport]->vc_isEmpty(0) == false &&
+                    m_input_unit[inport]->get_direction() != "Local") {
+                    // getTopFlit.. recomute route and insertit back again...
+                    flit* t_flit = m_input_unit[inport]->getTopFlit(0);
+                    int outport;
+//                    int toss = random() % 10;
+//                    if( toss == 1) {
+//                        // outport can't be 0
+//                        outport = (random() % (m_output_unit.size() - 2)) + 2;
+//                    } else {
+                    cout << "Re-computing outport for Router: " << m_id << endl;
+                    outport = route_compute(t_flit->get_route(),
+                                    inport, getInportDirection(inport));
+//                    }
+                    // set the outport in the flit as well as the direction of
+                    // hte outport in the flit
+                    t_flit->set_outport(outport);
+                    t_flit->set_outport_dir(getOutportDirection(outport));
+                    m_input_unit[inport]->insertFlit(0, t_flit);
+                }
+            }
+
+//            fatal("Not implemented \n"); // implement deflection here
         }
     }
     // }
@@ -582,6 +609,16 @@ Router::swapInport() {
     }
 
     return 0;
+}
+
+
+int
+Router::get_numFreeVC(PortDirection dirn_) {
+    // Caution: This 'dirn_' is the direction of inport
+    // of downstream router...
+    assert(dirn_ != "Local");
+    int inport_id = m_routing_unit->m_inports_dirn2idx[dirn_];
+    return (m_input_unit[inport_id]->get_numFreeVC(dirn_));
 }
 
 

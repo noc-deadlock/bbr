@@ -68,7 +68,15 @@ OutputUnit::decrement_credit(int out_vc)
     DPRINTF(RubyNetwork, "Router %d OutputUnit %d decrementing credit for "
             "outvc %d at time: %lld\n",
             m_router->get_id(), m_id, out_vc, m_router->curCycle());
-
+    #if(MY_PRINT)
+    // print the direction of outputUnit and check ig the out_vc is
+    // critical or not...
+    cout << "is outVc: " << out_vc <<" critical: " <<
+            m_outvc_state[out_vc]->is_vc_critical() << endl;
+    printf("Router %d OutputUnit %d decrementing credit for "
+            "outvc %d in direction: %s at time: %ld\n",
+            m_router->get_id(), m_id, out_vc, m_direction.c_str(), (long)m_router->curCycle());
+    #endif
     m_outvc_state[out_vc]->decrement_credit();
 }
 
@@ -78,7 +86,11 @@ OutputUnit::increment_credit(int out_vc)
     DPRINTF(RubyNetwork, "Router %d OutputUnit %d incrementing credit for "
             "outvc %d at time: %ld\n",
             m_router->get_id(), m_id, out_vc, (long)m_router->curCycle());
-
+    #if(MY_PRINT)
+    printf("Router %d OutputUnit %d incrementing credit for "
+            "outvc %d at time: %ld\n",
+            m_router->get_id(), m_id, out_vc, (long)m_router->curCycle());
+    #endif
     m_outvc_state[out_vc]->increment_credit();
 }
 
@@ -121,7 +133,8 @@ OutputUnit::select_free_vc(int vnet)
 {
     int vc_base = vnet*m_vc_per_vnet;
     for (int vc = vc_base; vc < vc_base + m_vc_per_vnet; vc++) {
-        if (is_vc_idle(vc, m_router->curCycle())) {
+        if (is_vc_idle(vc, m_router->curCycle()) &&
+            (is_vc_critical(vc) == false)) {
             m_outvc_state[vc]->setState(ACTIVE_, m_router->curCycle());
             return vc;
         }

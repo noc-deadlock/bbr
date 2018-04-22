@@ -116,6 +116,7 @@ Router::init()
 void
 Router::critical_swap(int critical_inport_id, int inport_id)
 {
+    assert(m_input_unit[inport_id]->vc_isEmpty(0) == false);
     // critical_inport_id must be empty
     // inport_id must NOT be empty... doSwap
     // doSwap.. just set the inport-vc active and idle accordingly..
@@ -366,6 +367,7 @@ Router::wakeup()
     cout << "Router-" << m_id << " woke up at cycle: " << curCycle() << endl;
     cout << "-------------------------" << endl;
     #endif
+
     if(get_net_ptr()->isEnableSwizzleSwap() == true  &&
         get_net_ptr()->getPolicy() == MINIMAL_) {
         assert(m_input_unit[critical_inport.id]->vc_isEmpty(0) == true);
@@ -407,6 +409,20 @@ Router::wakeup()
         cout << "critical_vc_cnt: " << critical_vc_cnt << endl;
         #endif
         assert(critical_vc_cnt == 1);
+
+        // out_vc credit count corresponding to critical vc should always
+        // be 1.
+        Router* rout_ = get_net_ptr()->\
+                    get_RouterInDirn(getInportDirection(critical_inport.id), m_id);
+
+        PortDirection upstream_outputUnit_dir =
+                input_output_dirn_map(getInportDirection(critical_inport.id));
+        // get id for that direction in router_
+        int upstrm_outputUnit_id =
+                rout_->m_routing_unit->m_outports_dirn2idx[upstream_outputUnit_dir];
+        assert(rout_->get_outputUnit_ref()\
+            [upstrm_outputUnit_id]->get_credit_count(0) == 1);
+
     }
 
     int router_occupancy = 0;

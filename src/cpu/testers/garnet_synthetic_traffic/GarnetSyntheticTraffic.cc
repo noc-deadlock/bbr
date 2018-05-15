@@ -241,6 +241,86 @@ GarnetSyntheticTraffic::generatePkt()
         dest_x = (src_x + (int) ceil(radix/2) - 1) % radix;
         dest_y = src_y;
         destination = dest_y*radix + dest_x;
+    } // real traffic patterns starts from here...
+    else if (traffic == HADOOP_) {
+        int root = 0;
+        if (source == root) // root
+        {
+            destination = random_mt.random<unsigned>(0, num_destinations - 1);
+        }
+        else
+        {
+            destination = root;
+        }
+    } else if (traffic == BPLUS_) {
+        // Create a binary tree
+        // Node x sends randomly to 2x and 2x+1
+        // Start with Node 1
+        int rand = random_mt.random<unsigned>(0, 1);
+        if (source != 0)
+        {
+            if (rand == 0)
+                destination = 2*source;
+            else
+                destination = 2*source+1;
+        }
+        else
+        {
+            return;
+        }
+    } else if (traffic == KMEANS_) {
+        int k = 5;
+        if (source%(k+1) == 0)
+        {
+            int rand = random_mt.random<unsigned>(1, k);
+            destination = source + rand;
+        }
+        else
+        {
+            return;
+        }
+    } else if (traffic == SRAD_) {
+        // Stencil -- communicate with one of the 4 neighbors
+        int rand = random_mt.random<unsigned>(0, 3);
+        if (rand == 0) // east
+        {
+            dest_x = src_x + 1;
+            if (dest_x == radix)
+                dest_x = 0;
+            dest_y = src_y;
+        }
+        else if (rand == 1) // north
+        {
+            dest_x = src_x;
+            dest_y = src_y + 1;
+            if (dest_y == radix)
+                dest_y = 0;
+        }
+        else if (rand == 2) // west
+        {
+            dest_x = src_x - 1;
+            if (dest_x == -1)
+                dest_x = radix - 1;
+            dest_y = src_y;
+        }
+        else if (rand == 3) // south
+        {
+            dest_x = src_x;
+            dest_y = src_y -1;
+            if (dest_y == -1)
+                dest_y = radix - 1;
+        }
+
+        destination = dest_y*radix + dest_x;
+    } else if (traffic == BFS_) {
+        int rand = random_mt.random<unsigned>(0, 3);
+
+        // For num_dest = 32:
+        // rand = 0 => dest = 0
+        // rand = 1 => dest = 8
+        // rand = 2 => dest = 16
+        // rand = 3 => dest = 24
+        destination = rand * (num_destinations/4);
     }
     else {
         fatal("Unknown Traffic Type: %s!\n", traffic);

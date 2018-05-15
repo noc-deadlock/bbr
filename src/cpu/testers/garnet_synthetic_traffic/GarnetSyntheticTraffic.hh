@@ -50,6 +50,11 @@ enum TrafficType {BIT_COMPLEMENT_ = 0,
                   TORNADO_ = 5,
                   TRANSPOSE_ = 6,
                   UNIFORM_RANDOM_ = 7,
+                  HADOOP_ = 8,
+                  BPLUS_ = 9,
+                  KMEANS_ = 10,
+                  SRAD_ = 11,
+                  BFS_ = 12,
                   NUM_TRAFFIC_PATTERNS_};
 
 class Packet;

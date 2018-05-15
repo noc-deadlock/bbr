@@ -79,8 +79,7 @@ Router::~Router()
     delete m_switch;
 }
 
-void
-Router::init()
+void Router::init()
 {
     BasicRouter::init();
 
@@ -113,8 +112,7 @@ Router::init()
     m_switch->init();
 }
 
-void
-Router::critical_swap(int critical_inport_id, int inport_id)
+void Router::critical_swap(int critical_inport_id, int inport_id)
 {
     assert(m_input_unit[inport_id]->vc_isEmpty(0) == false);
     // critical_inport_id must be empty
@@ -171,8 +169,7 @@ Router::critical_swap(int critical_inport_id, int inport_id)
     return;
 }
 
-void
-Router::bubble_deflect()
+void Router::bubble_deflect()
 {
     // take the flit and swap...
     for(int inp_ = 0; inp_ < m_input_unit.size(); ++inp_) {
@@ -304,8 +301,7 @@ Router::bubble_deflect()
 
 // this api will loop through all the input port of the router (point by my_id);
 // except critical and local inport
-bool
-Router::chk_critical_deflect(int my_id)
+bool Router::chk_critical_deflect(int my_id)
 {
     std::vector<int> doDeflect;
     // 2 Local_ ports and 1 critical port
@@ -567,8 +563,7 @@ Router::wakeup()
 
 // Note: implement peekTopFlit on linkClass as well.. if there's already
 // packet sitting on the link then don't decrement credits for the bubble...
-int
-Router::swapInport() {
+int Router::swapInport() {
 
     // If my router is empty then don't do swaps..
     int inport_;

@@ -442,14 +442,17 @@ Router::wakeup()
             // just incremennt the global counter whenever
             // 'swapInport'returns either 1 or 2
             // keep a counter for incrementing indivdually as well
-            if(this->is_myTurn() == true) {
+            // if(this->is_myTurn() == true)
+            if( curCycle() % get_net_ptr()->tdm_ == 0)  {
                 #if (MY_PRINT)
                 cout << "Doing swizzle at cycle: " << curCycle() << endl;
                 #endif
                 success = swapInport();
             }
             if(success == 1) {
-                get_net_ptr()->num_bubbleSwizzles++;
+                // Not counting the bubble-movement with empty slot
+                // as it doesn't consume energy.
+                // get_net_ptr()->num_bubbleSwizzles++;
 
                 #if (MY_PRINT)
                 cout << "Swizzle completed with empty input-port..." << endl;

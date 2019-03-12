@@ -416,6 +416,11 @@ GarnetSyntheticTraffic::initTrafficType()
     trafficStringToEnum["tornado"] = TORNADO_;
     trafficStringToEnum["transpose"] = TRANSPOSE_;
     trafficStringToEnum["uniform_random"] = UNIFORM_RANDOM_;
+    trafficStringToEnum["hadoop"] = HADOOP_;
+    trafficStringToEnum["bplus"] = BPLUS_;
+    trafficStringToEnum["kmeans"] = KMEANS_;
+    trafficStringToEnum["srad"] = SRAD_;
+    trafficStringToEnum["bfs"] = BFS_;
 }
 
 void

@@ -180,6 +180,8 @@ class Router : public BasicRouter, public Consumer
 
     RoutingUnit *m_routing_unit;
 
+    int mrkd_flt_; // marked packet that nic can inject to this router.
+
   private:
     Cycles m_latency;
     int m_virtual_networks, m_num_vcs, m_vc_per_vnet;

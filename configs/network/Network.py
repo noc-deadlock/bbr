@@ -87,6 +87,16 @@ def define_options(parser):
                       help="""when to perform swizzle within a router;
                           default is 0; if swizzleSwap enabled then it must
                           be non-zero""")
+    parser.add_option("--warmup-cycles", action="store",
+                      type="int", default=1000,
+                      help="number of cycles before marked packets get injected\
+                      into the network")
+    parser.add_option("--marked-flits", action="store",
+                      type="int", default=100000,
+                      help="number of marked flits injected into the network\
+                      marked packets would be just /k where ther are k-flits\
+                      per packet")
+
 def create_network(options, ruby):
 
     # Set the network classes based on the command line options
@@ -119,6 +129,9 @@ def init_network(options, network, InterfaceClass):
         network.ni_flit_size = options.link_width_bits / 8
         network.routing_algorithm = options.routing_algorithm
         network.garnet_deadlock_threshold = options.garnet_deadlock_threshold
+        network.sim_type = options.sim_type
+        network.warmup_cycles = options.warmup_cycles
+        network.marked_flits = options.marked_flits
 
     if options.network == "simple":
         network.setup_buffers()

@@ -37,3 +37,4 @@ class BasicRouter(ClockedObject):
 
     # only used by garnet
     latency   = Param.Cycles(1, "number of cycles inside router")
+    marked_flit = Param.Int(1000, "marked flit used by the router")

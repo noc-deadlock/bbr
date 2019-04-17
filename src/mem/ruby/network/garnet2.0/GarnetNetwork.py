@@ -53,6 +53,9 @@ class GarnetNetwork(RubyNetwork):
     fault_model = Param.FaultModel(NULL, "network fault model");
     garnet_deadlock_threshold = Param.UInt32(50000,
                               "network-level deadlock threshold")
+    sim_type = Param.Int(Parent.sim_type, "simulation_type")
+    warmup_cycles = Param.Int(Parent.warmup_cycles, "warmup_cycles")
+    marked_flits = Param.Int(Parent.marked_flits, "number of marked flits")
 
 class GarnetNetworkInterface(ClockedObject):
     type = 'GarnetNetworkInterface'

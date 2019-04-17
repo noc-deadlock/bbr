@@ -88,6 +88,7 @@ GarnetSyntheticTraffic::GarnetSyntheticTraffic(const Params *p)
       numPacketsSent(0),
       singleSender(p->single_sender),
       singleDest(p->single_dest),
+      sim_type(p->sim_type),
       trafficType(p->traffic_type),
       injRate(p->inj_rate),
       injVnet(p->inj_vnet),
@@ -177,11 +178,19 @@ GarnetSyntheticTraffic::tick()
     }
 
     // Schedule wakeup
-    if (curTick() >= simCycles)
-        exitSimLoop("Network Tester completed simCycles");
-    else {
+    if (sim_type == 1) {
+        if (curTick() >= simCycles)
+            exitSimLoop("Network Tester completed simCycles");
+        else {
+            if (!tickEvent.scheduled())
+                schedule(tickEvent, clockEdge(Cycles(1)));
+        }
+    } else if(sim_type == 2) {
         if (!tickEvent.scheduled())
-            schedule(tickEvent, clockEdge(Cycles(1)));
+        schedule(tickEvent, clockEdge(Cycles(1)));
+//        fatal("sim_type: %d is not implemented currently!", sim_type);
+    } else {
+        fatal("unknown 'sim_type: %d' option given", sim_type);
     }
 }
 

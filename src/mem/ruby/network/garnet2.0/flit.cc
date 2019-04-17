@@ -35,7 +35,7 @@
 
 // Constructor for the flit
 flit::flit(int id, int  vc, int vnet, RouteInfo route, int size,
-    MsgPtr msg_ptr, Cycles curTime)
+    MsgPtr msg_ptr, Cycles curTime, bool marked)
 {
     m_size = size;
     m_msg_ptr = msg_ptr;
@@ -48,6 +48,8 @@ flit::flit(int id, int  vc, int vnet, RouteInfo route, int size,
     m_route = route;
     m_stage.first = I_;
     m_stage.second = m_time;
+    m_outport = -1;
+    m_marked = marked;
     m_outport_dirn = "Unknown";
     m_outport = -1;
 

@@ -1,0 +1,4 @@
+Sample command-lines:
+=========================
+./build/Garnet_standalone/gem5.opt configs/example/garnet_synth_traffic.py --topology=Mesh_XY --num-cpus=64 --num-dirs=64 --mesh-rows=8 --network=garnet2.0 --router-latency=1 --sim-cycles=10000 --swizzle-swap=1 --policy=1 --tdm=1 --inj-vnet=0 --vcs-per-vnet=2 --injectionrate=0.20 --synthetic=uniform_random --routing-algorithm=2
+==========================

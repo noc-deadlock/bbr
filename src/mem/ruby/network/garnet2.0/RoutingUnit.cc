@@ -36,6 +36,7 @@
 #include "base/cast.hh"
 #include "mem/ruby/network/garnet2.0/InputUnit.hh"
 #include "mem/ruby/network/garnet2.0/Router.hh"
+#include "mem/ruby/network/garnet2.0/OutputUnit.hh"
 #include "mem/ruby/slicc_interface/Message.hh"
 
 RoutingUnit::RoutingUnit(Router *router)
@@ -104,10 +105,39 @@ int RoutingUnit::lookupRoutingTable(int vnet, NetDest msg_destination)
         exit(0);
     }
 
+    // go to output unit pointed by each outport of the router and
+    // print out the OutVC state of each of those outport VC
+    int outport_id;
+    std::vector<int>outport_credit_index; // keep the total credit count
+                                        // at the outport-id index
+
+    int accum_;
+    for(int i = 0; i < output_link_candidates.size(); i++) {
+
+        outport_id = output_link_candidates[i];
+
+        accum_ = 0;
+
+        // get credit count for each outvc
+        accum_ += m_router->get_outputUnit_ref()[outport_id]\
+                    ->getNumFreeVCs(vnet);
+        outport_credit_index.push_back(accum_);
+    }
+
+    // now you have populated the vector, find the max entry
+    int max = -1;
+    int candidate = -1;
+    for(int i = 0; i < outport_credit_index.size(); i++ ) {
+        if(outport_credit_index[i] > max) {
+            max = outport_credit_index[i];
+            candidate = i;
+        }
+    }
+
     // Randomly select any candidate output link
-    int candidate = 0;
-    if (!(m_router->get_net_ptr())->isVNetOrdered(vnet))
-        candidate = rand() % num_candidates;
+//    int candidate = 0;
+//    if (!(m_router->get_net_ptr())->isVNetOrdered(vnet))
+//        candidate = rand() % num_candidates;
 
     output_link = output_link_candidates.at(candidate);
     return output_link;

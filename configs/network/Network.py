@@ -96,6 +96,9 @@ def define_options(parser):
                       help="number of marked flits injected into the network\
                       marked packets would be just /k where ther are k-flits\
                       per packet")
+    parser.add_option("--conf-file", type="string",
+                  default="64_nodes-connectivity_matrix_0-links_removed_0.txt",
+                  help="check configs/topologies for complete set")
 
 def create_network(options, ruby):
 

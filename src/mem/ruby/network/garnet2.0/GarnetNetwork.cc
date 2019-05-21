@@ -310,33 +310,45 @@ GarnetNetwork::get_RouterInDirn( PortDirection outport_dir, int my_id )
 //    cout << "GarnetNetwork::get_RouterInDirn: my_id: " << my_id << endl;
     // Do border control check here...
 
-    /*outport direction fromt he flit for this router*/
+    /*outport direction from the flit for this router*/
     if (outport_dir == "East") {
-        downstream_id = my_id + 1;
+        if ( my_id % num_cols == (num_cols - 1) )
+            downstream_id = my_id - num_cols + 1;
+        else
+            downstream_id = my_id + 1;
         // constraints on downstream router-id
         for(int k=(num_cols-1); k < getNumRouters(); k+=num_cols ) {
-            assert(my_id != k);
+            // assert(my_id != k); // In Torus topology this does not hold True
         }
     }
     else if (outport_dir == "West") {
-        downstream_id = my_id - 1;
+        if ( my_id % num_cols == 0 )
+            downstream_id = my_id + num_cols - 1;
+        else
+            downstream_id = my_id - 1;
         // constraints on downstream router-id
         for(int k=0; k < getNumRouters(); k+=num_cols ) {
-            assert(my_id != k);
+            // assert(my_id != k); // In Torus topology this does not hold True
         }
     }
     else if (outport_dir == "North") {
-        downstream_id = my_id + num_cols;
+        if ( my_id / num_cols == (num_cols - 1) )
+            downstream_id = my_id % num_cols;
+        else
+            downstream_id = my_id + num_cols;
         // constraints on downstream router-id
         for(int k=((num_cols-1)*num_cols); k < getNumRouters(); k+=1 ) {
-            assert(my_id != k);
+            // assert(my_id != k); // In Torus topology this does not hold True
         }
     }
     else if (outport_dir == "South") {
-        downstream_id = my_id - num_cols;
+        if ( my_id / num_cols == 0 )
+            downstream_id = my_id + (num_cols)*(num_cols - 1);
+        else
+            downstream_id = my_id - num_cols;
         // constraints on downstream router-id
         for(int k=0; k < num_cols; k+=1 ) {
-            assert(my_id != k);
+            // assert(my_id != k); // In Torus topology this does not hold True
         }
     }
     else if (outport_dir == "Local"){
@@ -358,11 +370,12 @@ GarnetNetwork::get_RouterInDirn( PortDirection outport_dir, int my_id )
 //    cout << "GarnetNetwork::get_RouterInDirn: my_id: " << my_id << endl;
 //    cout << "----------------" << endl;
 
-    if ((downstream_id < 0) || (downstream_id >= getNumRouters())) {
-        assert(0);
-        return NULL;
-    } else
-        return m_routers[downstream_id];
+//    if ((downstream_id < 0) || (downstream_id >= getNumRouters())) {
+//        assert(0);
+//        return NULL;
+//    } else
+    assert(downstream_id >= 0);
+    return m_routers[downstream_id];
 //    return downstream_id;
 }
 
